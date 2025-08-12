@@ -1,6 +1,6 @@
 # backend/judge/schemas.py
 from typing import Any, Dict, List, Literal, Optional, TypedDict
-from pydantic import BaseModel, Field
+from typing_extensions import TypedDict
 
 # ---- Shared literals / types ----
 PipelineID = Literal["judge", "tool_chain"]
