@@ -1,0 +1,51 @@
+version: "3.9"
+
+services:
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: truthrouter-backend
+    env_file:
+      - ./.env               # your secrets (OPENROUTER_API_KEY, etc.)
+    ports:
+      - "8000:8000"
+    command: uvicorn app.main:app --host 0.0.0.0 --port 8000 --reload
+    volumes:
+      - ./backend:/app       # hot reload in dev
+    depends_on:
+      - router
+    networks:
+      - trnet
+
+  router:
+    image: busybox
+    command: ["sh","-c","echo 'placeholder service if you add queues later' && sleep 3600"]
+    networks:
+      - trnet
+
+  frontend:
+    build:
+      context: ./frontend
+    container_name: truthrouter-frontend
+    env_file:
+      - ./.env
+    environment:
+      # Next.js code can read this at build/runtime
+      - NEXT_PUBLIC_BACKEND_URL=http://localhost:8000
+      # Ensure Node can install deps behind corp proxies if needed
+      # - HTTPS_PROXY=...
+    ports:
+      - "3000:3000"
+    command: ["npm","run","dev"]
+    volumes:
+      - ./frontend:/usr/src/app
+      - /usr/src/app/node_modules
+    depends_on:
+      - backend
+    networks:
+      - trnet
+
+networks:
+  trnet:
+    driver: bridge
