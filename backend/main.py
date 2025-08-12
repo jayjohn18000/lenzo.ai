@@ -1,64 +1,68 @@
 # backend/main.py
-
-import os
-from dotenv import load_dotenv
-from fastapi import FastAPI
+from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
-from pydantic import BaseModel
-from typing import List, Optional
 
-from backend.utils.ask import fetch_responses_from_models
-from backend.utils.judge import score_responses
+from backend.judge.schemas import RouteRequest, RouteResponse, HealthResponse
+from backend.judge.config import settings
+from backend.judge.policy.dispatcher import decide_pipeline
+from backend.judge.pipelines.runner import run_pipeline
+from backend.judge.utils.trace import new_trace_id
 
-load_dotenv()
 
-backend = FastAPI()
+app = FastAPI(title="TruthRouter", version="0.1.0")
 
-backend.add_middleware(
+# CORS for local dev / Next.js frontend
+app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],
+    allow_origins=["http://localhost:3000", "http://127.0.0.1:3000", "*"],
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
 )
 
 
-class ResponseItem(BaseModel):
-    model: str
-    response: Optional[str] = None
+@app.get("/health", response_model=HealthResponse)
+async def health():
+    """Lightweight readiness check."""
+    ok = bool(settings.OPENROUTER_API_KEY)
+    return HealthResponse(status="ok" if ok else "degraded")
 
 
-class RouteInput(BaseModel):
-    prompt: str
-    responses: List[ResponseItem]
-    judge_models: List[str]
-    use_ask: Optional[bool] = False
+@app.post("/route", response_model=RouteResponse)
+async def route(req: RouteRequest):
+    """
+    Unified entrypoint:
+      - decide pipeline (judge | tool_chain)
+      - run selected pipeline
+      - return normalized response with trace_id
+    """
+    trace_id = new_trace_id()
+    try:
+        pipeline_id, decision_reason = decide_pipeline(req)
+        result = await run_pipeline(pipeline_id, req, trace_id=trace_id)
+
+        # Citations are on for both pipelines; ensure key exists
+        result.setdefault("citations", [])
+
+        return RouteResponse(
+            trace_id=trace_id,
+            pipeline_id=pipeline_id,
+            decision_reason=decision_reason,
+            **result,
+        )
+    except HTTPException:
+        # re-raise FastAPI HTTPExceptions as-is
+        raise
+    except Exception as e:
+        # one consistent error envelope
+        raise HTTPException(
+            status_code=500,
+            detail={"error": str(e), "trace_id": trace_id},
+        )
 
 
-@backend.post("/route")
-async def route_llms(data: RouteInput):
-    responses = data.responses
+# optional: `uvicorn backend.main:app --reload`
+if __name__ == "__main__":
+    import uvicorn
 
-    if data.use_ask:
-        raw_responses = await fetch_responses_from_models(data.prompt)
-        responses = [ResponseItem(**r) for r in raw_responses]
-
-    valid_responses = [r for r in responses if r.response]
-    if not valid_responses:
-        return {
-            "prompt": data.prompt,
-            "responses": [r.dict() for r in responses],
-            "error": "No valid responses to score."
-        }
-
-    result = await score_responses(
-        responses=[r.dict() for r in valid_responses],
-        judge_models=data.judge_models,
-        prompt=data.prompt
-    )
-
-    return {
-        "prompt": data.prompt,
-        "responses": [r.dict() for r in responses],
-        **result
-    }
+    uvicorn.run("backend.main:app", host="0.0.0.0", port=8000, reload=True)
