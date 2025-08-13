@@ -1,42 +1,45 @@
 # backend/judge/config.py
-import os
-from pydantic import BaseSettings, Field
-from typing import List
+
+from functools import lru_cache
+from typing import Literal
+
+from pydantic import Field, SecretStr
+from pydantic_settings import BaseSettings, SettingsConfigDict
+
 
 class Settings(BaseSettings):
-    # --- Provider keys / endpoints ---
-    OPENROUTER_API_KEY: str = Field(default_factory=lambda: os.getenv("OPENROUTER_API_KEY", ""))
+    # Required secrets / keys
+    openrouter_api_key: SecretStr = Field(..., alias="OPENROUTER_API_KEY")
 
-    OPENROUTER_API_URL: str = "https://openrouter.ai/api/v1/chat/completions"
-    OPENROUTER_HEADERS: dict = Field(
-        default_factory=lambda: {
-            "Authorization": f"Bearer {os.getenv('OPENROUTER_API_KEY', '')}",
-            # Helpful but optional meta headers for OpenRouter
-            "HTTP-Referer": os.getenv("HTTP_REFERER", "http://localhost"),
-            "X-Title": os.getenv("APP_TITLE", "TruthRouter"),
-            "Content-Type": "application/json",
-        }
+    # App config (optional but handy)
+    environment: Literal["dev", "prod", "test"] = "dev"
+    log_level: Literal["DEBUG", "INFO", "WARNING", "ERROR"] = "INFO"
+    request_timeout_seconds: float = 60.0
+
+    # pydantic-settings v2 config
+    model_config = SettingsConfigDict(
+        env_file=(".env", "openrouter_key.env"),  # load from either if present
+        env_file_encoding="utf-8",
+        extra="ignore",
+        case_sensitive=False,
     )
 
-    # --- Routing & scoring policy ---
-    CONF_THRESHOLD: float = 0.85            # escalate to tool_chain if pre-pass falls below this
-    CITATIONS_DEFAULT_ON: bool = True       # keep citations on for both pipelines
+    # Helper for auth headers when calling OpenRouter
+    def openrouter_headers(self) -> dict:
+        return {
+            "Authorization": f"Bearer {self.openrouter_api_key.get_secret_value()}",
+            # Optional but recommended by OpenRouter:
+            # Set these to something meaningful for your app / domain
+            "HTTP-Referer": "http://localhost:8000",
+            "X-Title": "TruthRouter Local",
+        }
 
-    # --- Model selections ---
-    DEFAULT_MODELS: List[str] = [
-        "openrouter/anthropic/claude-3.5-sonnet",
-        "openrouter/openai/gpt-4o",
-        "openrouter/mistralai/mistral-large",
-    ]
-    JUDGE_MODEL: str = "openrouter/openai/gpt-4o-mini"
 
-    # --- Time & cost guards (simple MVP knobs) ---
-    HARD_TIME_BUDGET_SEC: float = 20.0
-    SOFT_TIME_BUDGET_SEC: float = 8.0
-    MAX_PARALLEL_FANOUT: int = 4
+@lru_cache
+def get_settings() -> Settings:
+    # Cached singleton so we don't re-parse env on every import
+    return Settings()
 
-    class Config:
-        env_file = ".env"
-        case_sensitive = False
 
-settings = Settings()
+# Convenient module-level instance if you prefer `from ... import settings`
+settings = get_settings()
