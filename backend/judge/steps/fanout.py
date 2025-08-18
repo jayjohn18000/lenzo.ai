@@ -4,7 +4,7 @@ import time
 import logging
 import random
 from typing import List, Optional
-
+from datetime import datetime
 from backend.judge.schemas import Candidate
 from backend.judge.clients.openrouter import llm_complete, OpenRouterError
 from backend.judge.config import settings
@@ -150,3 +150,17 @@ async def fanout_generate(
     
     logger.info(f"🎉 Returning {len(candidates)} successful candidates")
     return candidates
+
+def log_generation_event(trace_id, prompt, model, status, latency_ms, input_tokens, output_tokens, char_count):
+    log_entry = {
+        "trace_id": trace_id,
+        "timestamp": datetime.utcnow().isoformat() + "Z",
+        "prompt": prompt,
+        "model": model,
+        "status": status,
+        "latency_ms": latency_ms,
+        "input_tokens": input_tokens,
+        "output_tokens": output_tokens,
+        "char_count": char_count,
+    }
+    logger.info(f"[GENERATION_LOG] {log_entry}")
