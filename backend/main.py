@@ -7,7 +7,8 @@ from backend.judge.config import settings
 from backend.judge.policy.dispatcher import decide_pipeline
 from backend.judge.pipelines.runner import run_pipeline
 from backend.judge.utils.trace import new_trace_id
-
+import logging
+logging.basicConfig(level=logging.INFO)
 
 app = FastAPI(title="TruthRouter", version="0.1.0")
 

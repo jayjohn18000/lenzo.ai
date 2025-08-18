@@ -2,12 +2,14 @@
 from __future__ import annotations
 
 import json
+import logging
 from typing import Any, Dict, List, Tuple
 
 import httpx
 
 from backend.judge.config import settings
 
+logger = logging.getLogger(__name__)
 
 # Base URL from settings (e.g., https://openrouter.ai/api/v1)
 OPENROUTER_BASE: str = str(settings.openrouter_api_url)
@@ -21,16 +23,36 @@ class OpenRouterError(Exception):
 
 
 async def _post_chat(body: Dict[str, Any]) -> Dict[str, Any]:
+    logger.info(f"Making request to {CHAT_COMPLETIONS_URL}")
+    logger.info(f"Request body model: {body.get('model')}")
+    logger.info(f"Request headers: {dict(HEADERS)}")  # Don't log the actual API key
+    
     async with httpx.AsyncClient(timeout=TIMEOUT) as client:
-        r = await client.post(CHAT_COMPLETIONS_URL, headers=HEADERS, json=body)
-        # Standardize error propagation with body text for debugging
-        if r.status_code >= 400:
-            detail = r.text
-            raise OpenRouterError(f"{r.status_code}: {detail}")
         try:
-            return r.json()
-        except Exception as e:
-            raise OpenRouterError(f"Invalid JSON from OpenRouter: {e}")
+            r = await client.post(CHAT_COMPLETIONS_URL, headers=HEADERS, json=body)
+            logger.info(f"Response status: {r.status_code}")
+            
+            # Standardize error propagation with body text for debugging
+            if r.status_code >= 400:
+                detail = r.text
+                logger.error(f"OpenRouter API error {r.status_code}: {detail}")
+                raise OpenRouterError(f"{r.status_code}: {detail}")
+            
+            try:
+                response_data = r.json()
+                logger.info(f"Successfully received response with {len(str(response_data))} chars")
+                return response_data
+            except Exception as e:
+                logger.error(f"Failed to parse JSON response: {e}")
+                logger.error(f"Response text: {r.text[:500]}")
+                raise OpenRouterError(f"Invalid JSON from OpenRouter: {e}")
+                
+        except httpx.TimeoutException as e:
+            logger.error(f"Request timeout: {e}")
+            raise OpenRouterError(f"Request timeout: {e}")
+        except httpx.RequestError as e:
+            logger.error(f"Request error: {e}")
+            raise OpenRouterError(f"Request error: {e}")
 
 
 async def llm_complete(
@@ -43,6 +65,8 @@ async def llm_complete(
     Send a simple user-only (or system+user) chat to a specific model.
     Returns: (text, meta) where meta includes token usage if available.
     """
+    logger.info(f"Starting completion for model: {model}")
+    
     messages: List[Dict[str, str]] = []
     if system:
         messages.append({"role": "system", "content": system})
@@ -58,7 +82,12 @@ async def llm_complete(
     # Robust extraction: OpenRouter mirrors OpenAI response shape
     try:
         text = data["choices"][0]["message"]["content"]
+        if not text:
+            logger.warning(f"Empty response text for model {model}")
+            text = ""
     except (KeyError, IndexError, TypeError) as e:
+        logger.error(f"Unexpected response format for model {model}: {e}")
+        logger.error(f"Response data: {json.dumps(data, indent=2)[:500]}")
         raise OpenRouterError(f"Unexpected response format (no choices[0].message.content): {e}\nPayload: {json.dumps(data)[:500]}")
 
     usage = data.get("usage") or {}
@@ -68,6 +97,8 @@ async def llm_complete(
         "model": data.get("model", model),
         "id": data.get("id"),
     }
+    
+    logger.info(f"Completion successful for {model}: {len(text)} chars, {meta['tokens_in']} in, {meta['tokens_out']} out")
     return text, meta
 
 
@@ -104,6 +135,7 @@ async def llm_judge(
             v = float(scores.get(k, 0.5))
             clean[k] = max(0.0, min(1.0, v))
         return clean
-    except Exception:
+    except Exception as e:
+        logger.warning(f"Judge model returned non-JSON, using fallback: {e}")
         # Permissive fallback if judge outputs non-JSON
         return {k: 0.5 for k in rubric.keys()}

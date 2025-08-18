@@ -1,6 +1,6 @@
 # backend/judge/config.py
 from functools import lru_cache
-from typing import Literal
+from typing import Literal, List
 
 from pydantic import Field, HttpUrl, SecretStr
 from pydantic_settings import BaseSettings, SettingsConfigDict
@@ -20,7 +20,54 @@ class Settings(BaseSettings):
     environment: Literal["dev", "prod", "test"] = "dev"
     log_level: Literal["DEBUG", "INFO", "WARNING", "ERROR"] = "INFO"
     request_timeout_seconds: float = 60.0
-    MAX_PARALLEL_FANOUT: int = 5  # default value
+    MAX_PARALLEL_FANOUT: int = 5
+
+    # === Model configurations based on test results ===
+    # Primary models: Fast, reliable, diverse providers
+    DEFAULT_MODELS: List[str] = [
+        "openai/gpt-4o-mini",           # Fastest OpenAI, cost-effective
+        "google/gemini-flash-1.5",      # Second fastest overall  
+        "anthropic/claude-3-haiku",     # Fast Anthropic option
+        "meta-llama/llama-3.1-70b-instruct",  # Fast open-source option
+        "openai/gpt-4o",                # Premium option for quality
+    ]
+    
+    # Alternative model sets for different use cases
+    SPEED_OPTIMIZED_MODELS: List[str] = [
+        "mistralai/mistral-small",      # 0.48s - fastest
+        "google/gemini-flash-1.5",      # 0.55s - second fastest
+        "openai/gpt-3.5-turbo",         # 0.62s - reliable and fast
+    ]
+    
+    QUALITY_OPTIMIZED_MODELS: List[str] = [
+        "openai/gpt-4o",                # Premium quality
+        "anthropic/claude-3.5-sonnet",  # Top Anthropic model
+        "anthropic/claude-3-opus",      # Highest quality Anthropic
+    ]
+    
+    COST_OPTIMIZED_MODELS: List[str] = [
+        "openai/gpt-4o-mini",           # Cheapest OpenAI
+        "anthropic/claude-3-haiku",     # Cheapest Anthropic
+        "mistralai/mistral-small",      # Fast and cost-effective
+    ]
+    
+    # Judge model - use reliable, fast model for evaluation
+    JUDGE_MODEL: str = "openai/gpt-4o-mini"  # Fast and reliable for judging
+    
+    # Confidence threshold for escalation
+    CONF_THRESHOLD: float = 0.85
+
+    # === Model rotation settings ===
+    # You can enable model rotation to distribute load and avoid rate limits
+    ENABLE_MODEL_ROTATION: bool = True
+    
+    # Fallback models if primary models fail
+    FALLBACK_MODELS: List[str] = [
+        "openai/gpt-3.5-turbo",
+        "meta-llama/llama-3-70b-instruct", 
+        "mistralai/mistral-large",
+        "cohere/command-r-plus"
+    ]
 
     # pydantic-settings v2 config
     model_config = SettingsConfigDict(
@@ -39,7 +86,6 @@ class Settings(BaseSettings):
         }
 
     # === Back-compat properties ===
-    # Allow old code that accesses UPPERCASE names to keep working.
     @property
     def OPENROUTER_API_KEY(self) -> str:
         return self.openrouter_api_key.get_secret_value()

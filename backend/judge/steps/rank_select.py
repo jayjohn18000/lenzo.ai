@@ -1,6 +1,7 @@
 # backend/judge/steps/rank_select.py
 from __future__ import annotations
 from typing import Dict, List, Tuple, Any
+from backend.judge.schemas import Candidate
 
 
 def _weighted_score(
@@ -50,57 +51,65 @@ def _extract_score(
 
 
 def rank_and_select(
-    candidates: List[Dict[str, Any]],
-    *,
+    candidates: List[Any],
+    judge_scores: Dict[int, Dict[str, float]],
+    winner_info: Tuple[int, float],
     weights: Dict[str, float] | None = None,
-    k: int = 1,
-) -> Tuple[List[Dict[str, Any]], Dict[str, Any]]:
+) -> Tuple[Any, Dict[str, float], float]:
     """
-    Rank candidates by (weighted) score and return top-k along with debug meta.
-      candidates: list of dicts, expected keys:
-        - 'text': str (candidate answer)  (optional but typical)
-        - 'scores' or 'trait_scores': {trait: score in [0,1]} OR 'score': float
-      weights: {trait: weight} (any scale; normalized internally)
-      k: how many to return
-
-    Returns: (winners, meta)
-      winners: top-k list (each has an added 'final_score' field)
-      meta: { 'k': int, 'weights_used': dict|None, 'ranking': [ (idx, score) ] }
+    Judge pipeline version: select winner based on consensus results.
+    Returns: (winner_candidate, scores_by_trait, confidence)
     """
-    if not candidates:
-        return [], {"k": k, "weights_used": weights, "ranking": []}
+    winner_idx, avg_score = winner_info
+    
+    if winner_idx < 0 or winner_idx >= len(candidates):
+        # Fallback to first candidate if winner_idx is invalid
+        winner_idx = 0
+        avg_score = 0.5
+    
+    winner_cand = candidates[winner_idx]
+    scores_by_trait = judge_scores.get(winner_idx, {})
+    confidence = avg_score  # Use the consensus average as confidence
+    
+    return winner_cand, scores_by_trait, confidence
 
-    scored = []
-    for idx, item in enumerate(candidates):
-        s = _extract_score(item, weights)
-        scored.append((idx, s))
 
-    # sort high to low
-    scored.sort(key=lambda tup: tup[1], reverse=True)
-
-    winners: List[Dict[str, Any]] = []
-    for idx, s in scored[: max(1, k)]:
-        # copy to avoid mutating input
-        chosen = dict(candidates[idx])
-        chosen["final_score"] = s
-        winners.append(chosen)
-
-    meta = {
-        "k": k,
-        "weights_used": weights,
-        "ranking": scored,  # list of (original_index, score)
-    }
-    return winners, meta
-
-def best_by_verification(*args, **kwargs):
+def best_by_verification(
+    candidates: List[Candidate], 
+    verifications: List[Dict[str, Any]]
+) -> Tuple[str, List[Dict[str, Any]], float]:
     """
-    Placeholder for the original best_by_verification logic.
-    Replace this with the actual implementation.
+    Tool-chain pipeline version: select best candidate by verification coverage.
+    Returns: (answer_text, evidence_list, confidence)
     """
-    raise NotImplementedError("best_by_verification() is not yet implemented.")
+    if not candidates or not verifications:
+        return "No answer available", [], 0.0
+    
+    best_idx = 0
+    best_score = 0.0
+    
+    # Find candidate with highest verified ratio
+    for i, verification in enumerate(verifications):
+        if i < len(candidates):
+            stats = verification.get("stats", {})
+            verified_ratio = stats.get("verified_ratio", 0.0)
+            coverage_ratio = stats.get("coverage_ratio", 0.0)
+            
+            # Combine verified ratio and coverage ratio for scoring
+            score = (verified_ratio * 0.7) + (coverage_ratio * 0.3)
+            
+            if score > best_score:
+                best_score = score
+                best_idx = i
+    
+    winner = candidates[best_idx]
+    evidence = verifications[best_idx].get("evidence", [])
+    confidence = best_score
+    
+    return winner.text, evidence, confidence
 
 
-# ---- Back-compat alias (if the pipeline imported the wrong name earlier) ----
+# ---- Back-compat alias ----
 select_top = rank_and_select
 
-__all__ = ["rank_and_select", "select_top"]
+__all__ = ["rank_and_select", "select_top", "best_by_verification"]
