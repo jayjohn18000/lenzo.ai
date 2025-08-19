@@ -1,6 +1,7 @@
 # backend/judge/config.py
 from functools import lru_cache
 from typing import Literal, List
+import os
 
 from pydantic import Field, HttpUrl, SecretStr
 from pydantic_settings import BaseSettings, SettingsConfigDict
@@ -21,6 +22,31 @@ class Settings(BaseSettings):
     log_level: Literal["DEBUG", "INFO", "WARNING", "ERROR"] = "INFO"
     request_timeout_seconds: float = 60.0
     MAX_PARALLEL_FANOUT: int = 5
+
+    # ===== ADD THESE MISSING PROPERTIES =====
+    
+    # Database configuration
+    DATABASE_URL: str = Field(
+        default="sqlite:///./nextagi.db",
+        env="DATABASE_URL"
+    )
+    
+    # Redis configuration
+    REDIS_HOST: str = Field(default="localhost", env="REDIS_HOST")
+    REDIS_PORT: int = Field(default=6379, env="REDIS_PORT")
+    REDIS_URL: str = Field(default="redis://localhost:6379/0", env="REDIS_URL")
+    
+    # Debug mode
+    DEBUG: bool = Field(default=True, env="DEBUG")
+    
+    # Optional API keys for direct access
+    ANTHROPIC_API_KEY: SecretStr = Field(default="", env="ANTHROPIC_API_KEY")
+    OPENAI_API_KEY: SecretStr = Field(default="", env="OPENAI_API_KEY")
+    
+    # Security
+    SECRET_KEY: str = Field(default="dev-secret-key-change-in-production", env="SECRET_KEY")
+    
+    # ===== END ADDITIONS =====
 
     # === Model configurations based on test results ===
     # Primary models: Fast, reliable, diverse providers

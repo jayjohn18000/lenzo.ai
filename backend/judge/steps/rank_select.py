@@ -1,115 +1,128 @@
 # backend/judge/steps/rank_select.py
-from __future__ import annotations
-from typing import Dict, List, Tuple, Any
+"""
+Final ranking and selection of the winning candidate
+"""
+
+import logging
+from typing import List, Dict, Tuple, Optional, Any
+from statistics import mean
 from backend.judge.schemas import Candidate
 
-
-def _weighted_score(
-    scores: Dict[str, float] | None,
-    weights: Dict[str, float] | None,
-) -> float:
-    """
-    Compute a weighted score in [0,1] from a trait->score dict and weights.
-    Falls back to simple average if weights are missing.
-    """
-    if not scores:
-        return 0.0
-
-    # Clamp and coerce just in case
-    s = {k: max(0.0, min(1.0, float(v))) for k, v in scores.items()}
-
-    if weights:
-        # normalize weights so sum to 1 (ignore unknown traits)
-        w = {k: float(weights.get(k, 0.0)) for k in s.keys()}
-        total = sum(w.values())
-        if total > 0:
-            return sum(s[k] * (w[k] / total) for k in s.keys())
-        # fall through to unweighted if weights sum to 0
-
-    # simple average
-    return sum(s.values()) / len(s)
-
-
-def _extract_score(
-    item: Dict[str, Any],
-    weights: Dict[str, float] | None,
-) -> float:
-    """
-    Be permissive about candidate schemas:
-      - if item has top-level 'score' (numeric), use it
-      - else if item['scores'] is a dict, compute weighted score
-      - else 0.0
-    """
-    if isinstance(item.get("score"), (int, float)):
-        return float(item["score"])
-
-    scores = item.get("scores") or item.get("trait_scores") or None
-    if isinstance(scores, dict):
-        return _weighted_score(scores, weights)
-
-    return 0.0
-
+logger = logging.getLogger(__name__)
 
 def rank_and_select(
-    candidates: List[Any],
+    candidates: List[Candidate],
     judge_scores: Dict[int, Dict[str, float]],
-    winner_info: Tuple[int, float],
-    weights: Dict[str, float] | None = None,
-) -> Tuple[Any, Dict[str, float], float]:
+    consensus_result: Tuple[int, float]
+) -> Tuple[Candidate, Dict[str, float], float]:
     """
-    Judge pipeline version: select winner based on consensus results.
+    Final selection and confidence calculation
     Returns: (winner_candidate, scores_by_trait, confidence)
     """
-    winner_idx, avg_score = winner_info
+    if not candidates:
+        raise ValueError("No candidates provided")
     
-    if winner_idx < 0 or winner_idx >= len(candidates):
-        # Fallback to first candidate if winner_idx is invalid
-        winner_idx = 0
-        avg_score = 0.5
+    winner_idx, consensus_score = consensus_result
     
-    winner_cand = candidates[winner_idx]
-    scores_by_trait = judge_scores.get(winner_idx, {})
-    confidence = avg_score  # Use the consensus average as confidence
+    if winner_idx >= len(candidates):
+        raise ValueError(f"Winner index {winner_idx} out of range for {len(candidates)} candidates")
     
-    return winner_cand, scores_by_trait, confidence
+    winner_candidate = candidates[winner_idx]
+    winner_trait_scores = judge_scores.get(winner_idx, {})
+    
+    # Calculate final confidence
+    confidence = _calculate_final_confidence(
+        winner_candidate, 
+        winner_trait_scores, 
+        consensus_score,
+        candidates,
+        judge_scores
+    )
+    
+    logger.info(f"Selected winner: {winner_candidate.model} with confidence {confidence:.3f}")
+    
+    return winner_candidate, winner_trait_scores, confidence
 
-
-def best_by_verification(
-    candidates: List[Candidate], 
-    verifications: List[Dict[str, Any]]
-) -> Tuple[str, List[Dict[str, Any]], float]:
+def _calculate_final_confidence(
+    winner: Candidate,
+    winner_scores: Dict[str, float],
+    consensus_score: float,
+    all_candidates: List[Candidate],
+    all_scores: Dict[int, Dict[str, float]]
+) -> float:
     """
-    Tool-chain pipeline version: select best candidate by verification coverage.
-    Returns: (answer_text, evidence_list, confidence)
+    Calculate final confidence based on multiple factors
     """
-    if not candidates or not verifications:
-        return "No answer available", [], 0.0
+    confidence_factors = []
     
-    best_idx = 0
-    best_score = 0.0
+    # Base consensus score
+    confidence_factors.append(consensus_score)
     
-    # Find candidate with highest verified ratio
-    for i, verification in enumerate(verifications):
-        if i < len(candidates):
-            stats = verification.get("stats", {})
-            verified_ratio = stats.get("verified_ratio", 0.0)
-            coverage_ratio = stats.get("coverage_ratio", 0.0)
-            
-            # Combine verified ratio and coverage ratio for scoring
-            score = (verified_ratio * 0.7) + (coverage_ratio * 0.3)
-            
-            if score > best_score:
-                best_score = score
-                best_idx = i
+    # Winner margin (how much better than second place)
+    if len(all_candidates) > 1:
+        all_averages = []
+        for idx, scores in all_scores.items():
+            if scores:
+                avg = mean(scores.values())
+                all_averages.append(avg)
+        
+        if len(all_averages) >= 2:
+            all_averages.sort(reverse=True)
+            margin = all_averages[0] - all_averages[1]
+            margin_confidence = min(1.0, margin * 2)  # Scale margin to confidence
+            confidence_factors.append(margin_confidence)
     
-    winner = candidates[best_idx]
-    evidence = verifications[best_idx].get("evidence", [])
-    confidence = best_score
+    # Response quality indicators
+    if winner.text:
+        # Length quality
+        text_length = len(winner.text)
+        if 50 <= text_length <= 1000:
+            length_confidence = 0.8
+        elif text_length < 50:
+            length_confidence = 0.4
+        else:
+            length_confidence = 0.6
+        confidence_factors.append(length_confidence)
+        
+        # Heuristic score if available
+        if winner.heuristic_score is not None:
+            confidence_factors.append(winner.heuristic_score)
     
-    return winner.text, evidence, confidence
+    # Model reliability factor
+    model_reliability = _get_model_reliability(winner.model)
+    confidence_factors.append(model_reliability)
+    
+    # Calculate weighted average
+    final_confidence = mean(confidence_factors) if confidence_factors else 0.5
+    
+    return max(0.0, min(1.0, final_confidence))
 
-
-# ---- Back-compat alias ----
-select_top = rank_and_select
-
-__all__ = ["rank_and_select", "select_top", "best_by_verification"]
+def _get_model_reliability(model_name: str) -> float:
+    """
+    Get reliability score for different models based on known performance
+    """
+    # Model reliability mapping based on general performance
+    reliability_map = {
+        "openai/gpt-4o": 0.95,
+        "openai/gpt-4o-mini": 0.90,
+        "anthropic/claude-3.5-sonnet": 0.95,
+        "anthropic/claude-3-opus": 0.92,
+        "anthropic/claude-3-sonnet": 0.88,
+        "anthropic/claude-3-haiku": 0.85,
+        "google/gemini-pro-1.5": 0.87,
+        "google/gemini-flash-1.5": 0.83,
+        "meta-llama/llama-3.1-70b-instruct": 0.82,
+        "mistralai/mistral-large": 0.85,
+        "mistralai/mistral-medium": 0.80,
+        "mistralai/mistral-small": 0.78,
+    }
+    
+    # Extract base model name for matching
+    base_model = model_name.lower()
+    
+    for model_pattern, reliability in reliability_map.items():
+        if model_pattern.lower() in base_model:
+            return reliability
+    
+    # Default reliability for unknown models
+    return 0.75

@@ -1,14 +1,18 @@
 # backend/judge/utils/trace.py
-import time
-import os
-import random
-import string
+"""
+Tracing utilities for request tracking and observability
+"""
 
-def new_trace_id(prefix: str = "tr") -> str:
-    """
-    Compact, sortable-ish trace id: tr_<millis>_<6 random>
-    Example: tr_1733762512345_k9q2fz
-    """
-    ts = int(time.time() * 1000)
-    rand = ''.join(random.choices(string.ascii_lowercase + string.digits, k=6))
-    return f"{prefix}_{ts}_{rand}"
+import uuid
+from typing import Optional
+import time
+
+def new_trace_id() -> str:
+    """Generate a new unique trace ID for request tracking"""
+    return str(uuid.uuid4())
+
+def format_trace_log(trace_id: str, message: str, **kwargs) -> str:
+    """Format a log message with trace ID and optional metadata"""
+    timestamp = time.time()
+    extra_info = " ".join(f"{k}={v}" for k, v in kwargs.items())
+    return f"[{trace_id}] {timestamp} {message} {extra_info}".strip()

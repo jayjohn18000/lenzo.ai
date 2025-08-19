@@ -1,62 +1,125 @@
 # backend/judge/steps/heuristics.py
+"""
+Heuristic scoring for candidate responses
+"""
+
+import re
+import logging
 from typing import List
 from backend.judge.schemas import Candidate
 
-# quick-and-cheap red flags
-REFUSAL_PHRASES = (
-    "i cannot assist",
-    "i can’t assist",
-    "i cannot help",
-    "as an ai",
-    "i'm just an ai",
-    "as a language model",
-    "i am unable to",
-    "cannot provide",
-    "sorry, i can't",
-    "i do not have access",
-)
+logger = logging.getLogger(__name__)
 
-MIN_LEN = 40        # too short → likely low value
-MAX_LEN = 6000      # extremely long → likely rambling
-IDEAL_MIN = 200     # soft spot for many prompts
-IDEAL_MAX = 1200
+def score_heuristics(candidates: List[Candidate]) -> List[Candidate]:
+    """
+    Apply heuristic scoring to candidates based on response quality signals
+    """
+    for candidate in candidates:
+        candidate.heuristic_score = _calculate_heuristic_score(candidate)
+    
+    return candidates
 
-def _len_score(n: int) -> float:
-    # piecewise: reward being within [IDEAL_MIN, IDEAL_MAX], penalize outside
-    if n <= MIN_LEN:
-        return 0.2
-    if n >= MAX_LEN:
+def _calculate_heuristic_score(candidate: Candidate) -> float:
+    """
+    Calculate heuristic score based on multiple quality signals
+    """
+    if not candidate.text:
+        return 0.0
+    
+    text = candidate.text.strip()
+    score = 0.5  # Start with neutral score
+    
+    # Length-based scoring
+    length_score = _score_length(text)
+    
+    # Refusal detection
+    refusal_penalty = _detect_refusal(text)
+    
+    # Coherence signals
+    coherence_score = _score_coherence(text)
+    
+    # Error and placeholder detection
+    error_penalty = _detect_errors(text)
+    
+    # Combine scores
+    score = (
+        length_score * 0.3 +
+        coherence_score * 0.4 +
+        (1.0 - refusal_penalty) * 0.2 +
+        (1.0 - error_penalty) * 0.1
+    )
+    
+    return max(0.0, min(1.0, score))
+
+def _score_length(text: str) -> float:
+    """Score based on response length (sweet spot around 200-800 chars)"""
+    length = len(text)
+    
+    if length < 20:
+        return 0.1  # Too short
+    elif length < 50:
         return 0.3
-    if IDEAL_MIN <= n <= IDEAL_MAX:
-        return 1.0
-    # gentle taper outside ideal band
-    if n < IDEAL_MIN:
-        return max(0.2, 0.6 + (n - MIN_LEN) / max(1, (IDEAL_MIN - MIN_LEN)) * 0.4)
-    # n > IDEAL_MAX
-    return max(0.3, 1.0 - (n - IDEAL_MAX) / max(1, (MAX_LEN - IDEAL_MAX)) * 0.7)
+    elif length < 100:
+        return 0.6
+    elif length < 300:
+        return 0.9  # Good length
+    elif length < 800:
+        return 1.0  # Optimal length
+    elif length < 1500:
+        return 0.8  # Getting long
+    else:
+        return 0.6  # Too long
 
-def _refusal_score(text: str) -> float:
-    t = text.lower()
-    return 0.0 if any(p in t for p in REFUSAL_PHRASES) else 1.0
+def _detect_refusal(text: str) -> float:
+    """Detect if the model refused to answer (0.0 = no refusal, 1.0 = clear refusal)"""
+    text_lower = text.lower()
+    
+    refusal_patterns = [
+        r"i can't|i cannot|i'm not able",
+        r"i don't know|i'm not sure|i'm uncertain",
+        r"i'm sorry, but|sorry, i can't",
+        r"as an ai|as a language model",
+        r"i'm not allowed|i cannot provide",
+        r"against my guidelines|policy",
+    ]
+    
+    refusal_score = 0.0
+    for pattern in refusal_patterns:
+        if re.search(pattern, text_lower):
+            refusal_score += 0.2
+    
+    return min(1.0, refusal_score)
 
-def _format_score(text: str) -> float:
-    # reward some structure (very rough)
-    has_lists = "-" in text or "*" in text or "1." in text
-    has_headers = "##" in text or "\n\n" in text
-    return 0.8 + (0.1 if has_lists else 0.0) + (0.1 if has_headers else 0.0)
-
-def score_heuristics(cands: List[Candidate]) -> List[Candidate]:
-    """
-    Assigns heuristic_score in [0,1] to each candidate.
-    This is a low-cost signal used alongside judge scoring.
-    """
-    for c in cands:
-        text = c.text or ""
-        # base components
-        ls = _len_score(len(text))
-        rs = _refusal_score(text)
-        fs = _format_score(text)
-        # weighted blend (tuneable)
-        score = 0.5 * ls + 0.35 * rs + 0.15 * fs
-        c.heuristic_score = max(0.0, min(1.0, score))
-    return cands
+def _score_coherence(text: str) -> float:
+    """Score text coherence based on structure and flow"""
+    sentences = text.split('.')
+    sentence_count = len([s for s in sentences if s.strip()])
+    
+    # Sentence structure score
+    if sentence_count == 0:
+        return 0.0
+    elif sentence_count == 1:
+        return 0.6
+    elif sentence_count <= 5:
+        return 0.9
+    else:
+        return 0.8
+    
+def _detect_errors(text: str) -> float:
+    """Detect obvious errors or placeholder text"""
+    error_patterns = [
+        r"\[ERROR\]|\[PLACEHOLDER\]",
+        r"undefined|null|NaN",
+        r"lorem ipsum",
+        r"test test test",
+        r"TODO:|FIXME:",
+    ]
+    
+    error_score = 0.0
+    text_lower = text.lower()
+    
+    for pattern in error_patterns:
+        if re.search(pattern, text_lower):
+            error_score += 0.3
+    
+    return min(1.0, error_score)

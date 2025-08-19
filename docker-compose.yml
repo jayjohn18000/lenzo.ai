@@ -3,42 +3,83 @@ version: "3.9"
 services:
   backend:
     build:
-      context: .  # Build from root directory
+      context: .
       dockerfile: ./backend/Dockerfile
-    container_name: truthrouter-backend
+    container_name: nextagi-backend
     env_file:
-      - ./.env               # your secrets (OPENROUTER_API_KEY, etc.)
+      - .env
     ports:
       - "8000:8000"
     command: uvicorn backend.main:app --host 0.0.0.0 --port 8000 --reload
     volumes:
-      - ./backend:/app/backend       # hot reload in dev
+      - ./backend:/app/backend
       - ./requirements.txt:/app/requirements.txt
     networks:
-      - trnet
+      - nextagi-network
     environment:
       - PYTHONPATH=/app
+      - DATABASE_URL=sqlite:///./nextagi.db
+      - REDIS_HOST=redis
+      - REDIS_PORT=6379
+    depends_on:
+      - redis
+    restart: unless-stopped
 
   frontend:
     build:
       context: ./frontend
-    container_name: truthrouter-frontend
+      dockerfile: Dockerfile
+    container_name: nextagi-frontend
     env_file:
-      - ./.env
+      - .env
     environment:
-      # Next.js code can read this at build/runtime
       - NEXT_PUBLIC_BACKEND_URL=http://localhost:8000
     ports:
       - "3000:3000"
-    command: ["npm","run","dev"]
+    command: ["npm", "run", "dev"]
     volumes:
       - ./frontend:/usr/src/app
       - /usr/src/app/node_modules
     depends_on:
       - backend
     networks:
-      - trnet
+      - nextagi-network
+    restart: unless-stopped
+
+  redis:
+    image: redis:7-alpine
+    container_name: nextagi-redis
+    ports:
+      - "6379:6379"
+    networks:
+      - nextagi-network
+    restart: unless-stopped
+    command: redis-server --appendonly yes
+    volumes:
+      - redis_data:/data
+
+  # Optional: PostgreSQL for production
+  postgres:
+    image: postgres:15
+    container_name: nextagi-postgres
+    environment:
+      - POSTGRES_DB=nextagi
+      - POSTGRES_USER=nextagi_user
+      - POSTGRES_PASSWORD=nextagi_pass
+    ports:
+      - "5432:5432"
+    networks:
+      - nextagi-network
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    restart: unless-stopped
+    profiles:
+      - production
 
 networks:
-  trnet:
+  nextagi-network:
     driver: bridge
+
+volumes:
+  redis_data:
+  postgres_data:
