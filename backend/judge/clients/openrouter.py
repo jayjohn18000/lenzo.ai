@@ -1,4 +1,4 @@
-# backend/judge/clients/openrouter.py
+# backend/judge/clients/openrouter.py - COMPLETE THIS FILE
 from __future__ import annotations
 
 import json
@@ -25,7 +25,6 @@ class OpenRouterError(Exception):
 async def _post_chat(body: Dict[str, Any]) -> Dict[str, Any]:
     logger.info(f"Making request to {CHAT_COMPLETIONS_URL}")
     logger.info(f"Request body model: {body.get('model')}")
-    logger.info(f"Request headers: {dict(HEADERS)}")  # Don't log the actual API key
     
     async with httpx.AsyncClient(timeout=TIMEOUT) as client:
         try:
@@ -40,11 +39,10 @@ async def _post_chat(body: Dict[str, Any]) -> Dict[str, Any]:
             
             try:
                 response_data = r.json()
-                logger.info(f"Successfully received response with {len(str(response_data))} chars")
+                logger.info(f"Successfully received response")
                 return response_data
             except Exception as e:
                 logger.error(f"Failed to parse JSON response: {e}")
-                logger.error(f"Response text: {r.text[:500]}")
                 raise OpenRouterError(f"Invalid JSON from OpenRouter: {e}")
                 
         except httpx.TimeoutException as e:
@@ -65,77 +63,104 @@ async def llm_complete(
     Send a simple user-only (or system+user) chat to a specific model.
     Returns: (text, meta) where meta includes token usage if available.
     """
-    logger.info(f"Starting completion for model: {model}")
-    
-    messages: List[Dict[str, str]] = []
+    messages = []
     if system:
         messages.append({"role": "system", "content": system})
     messages.append({"role": "user", "content": prompt})
-
-    body: Dict[str, Any] = {
+    
+    body = {
         "model": model,
         "messages": messages,
-    }
-
-    data = await _post_chat(body)
-
-    # Robust extraction: OpenRouter mirrors OpenAI response shape
-    try:
-        text = data["choices"][0]["message"]["content"]
-        if not text:
-            logger.warning(f"Empty response text for model {model}")
-            text = ""
-    except (KeyError, IndexError, TypeError) as e:
-        logger.error(f"Unexpected response format for model {model}: {e}")
-        logger.error(f"Response data: {json.dumps(data, indent=2)[:500]}")
-        raise OpenRouterError(f"Unexpected response format (no choices[0].message.content): {e}\nPayload: {json.dumps(data)[:500]}")
-
-    usage = data.get("usage") or {}
-    meta: Dict[str, Any] = {
-        "tokens_in": usage.get("prompt_tokens", 0),
-        "tokens_out": usage.get("completion_tokens", 0),
-        "model": data.get("model", model),
-        "id": data.get("id"),
+        "max_tokens": 2048,
+        "temperature": 0.1,
     }
     
-    logger.info(f"Completion successful for {model}: {len(text)} chars, {meta['tokens_in']} in, {meta['tokens_out']} out")
-    return text, meta
-
-
-async def llm_judge(
-    *,
-    candidate: str,
-    rubric: Dict[str, float],
-    judge_model: str,
-) -> Dict[str, float]:
-    """
-    Ask a judge model to score candidate on traits 0..1.
-    We request strict JSON to simplify parsing; fallback returns flat 0.5s.
-    """
-    system = (
-        "You are a precise evaluator. "
-        "Return ONLY JSON mapping trait -> score in [0,1]. No prose."
-    )
-    prompt = (
-        "Evaluate the following answer. For each trait in the set, "
-        "produce a float score in [0,1]. Traits (with weights) are:\n"
-        f"{json.dumps(rubric)}\n\n"
-        "Answer:\n"
-        f"{candidate}\n\n"
-        "Return strictly a JSON object like: {\"accuracy\": 0.92, ...}"
-    )
-
-    text, _ = await llm_complete(model=judge_model, prompt=prompt, system=system)
-
     try:
-        scores = json.loads(text)
-        # Clamp to [0,1] and fill any missing keys
-        clean: Dict[str, float] = {}
-        for k in rubric.keys():
-            v = float(scores.get(k, 0.5))
-            clean[k] = max(0.0, min(1.0, v))
-        return clean
+        response_data = await _post_chat(body)
+        
+        # Extract text from response
+        if not response_data.get("choices"):
+            raise OpenRouterError("No choices in response")
+            
+        choice = response_data["choices"][0]
+        text = choice.get("message", {}).get("content", "")
+        
+        if not text:
+            raise OpenRouterError("Empty response content")
+        
+        # Extract metadata
+        usage = response_data.get("usage", {})
+        meta = {
+            "tokens_in": usage.get("prompt_tokens", 0),
+            "tokens_out": usage.get("completion_tokens", 0),
+            "total_tokens": usage.get("total_tokens", 0),
+            "model": response_data.get("model", model),
+        }
+        
+        return text.strip(), meta
+        
+    except OpenRouterError:
+        raise
     except Exception as e:
-        logger.warning(f"Judge model returned non-JSON, using fallback: {e}")
-        # Permissive fallback if judge outputs non-JSON
-        return {k: 0.5 for k in rubric.keys()}
+        logger.error(f"Unexpected error in llm_complete: {e}")
+        raise OpenRouterError(f"Unexpected error: {e}")
+
+
+async def llm_judge(candidate: str, rubric: Dict[str, float], judge_model: str) -> Dict[str, float]:
+    """
+    Score a candidate response against rubric traits (0-1 scale).
+    Returns: Dict[trait_name, score] where score is 0.0-1.0
+    """
+    traits_list = ", ".join(rubric.keys())
+    
+    system_prompt = f"""You are an expert evaluator. Score the following response on these traits: {traits_list}
+
+Scoring scale: 0.0 (poor) to 1.0 (excellent)
+
+Return ONLY a JSON object with scores. Example: {{"accuracy": 0.85, "clarity": 0.92}}
+Do not include any other text or explanation."""
+
+    prompt = f"""Response to evaluate:
+
+{candidate}
+
+Score this response on the following traits: {traits_list}
+
+Return only JSON with scores 0.0-1.0."""
+    
+    try:
+        text, _ = await llm_complete(model=judge_model, prompt=prompt, system=system_prompt)
+        
+        # Try to parse JSON response
+        # Clean up common JSON formatting issues
+        cleaned_text = text.strip()
+        if cleaned_text.startswith("```json"):
+            cleaned_text = cleaned_text[7:]
+        if cleaned_text.endswith("```"):
+            cleaned_text = cleaned_text[:-3]
+        cleaned_text = cleaned_text.strip()
+        
+        scores = json.loads(cleaned_text)
+        
+        # Ensure all rubric traits are present and valid
+        result = {}
+        for trait in rubric:
+            if trait in scores:
+                try:
+                    score = float(scores[trait])
+                    result[trait] = max(0.0, min(1.0, score))  # Clamp to 0-1
+                except (ValueError, TypeError):
+                    result[trait] = 0.5  # neutral fallback
+            else:
+                result[trait] = 0.5  # missing trait fallback
+        
+        return result
+        
+    except json.JSONDecodeError as e:
+        logger.warning(f"Failed to parse judge response as JSON: {e}")
+        # Fallback to neutral scores
+        return {trait: 0.5 for trait in rubric}
+    except Exception as e:
+        logger.error(f"Error in llm_judge: {e}")
+        # Fallback to neutral scores  
+        return {trait: 0.5 for trait in rubric}

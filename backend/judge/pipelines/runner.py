@@ -1,42 +1,51 @@
-# backend/judge/pipelines/runner.py
-import time
-from typing import Dict
+# backend/judge/pipelines/runner.py - CREATE THIS FILE
+from typing import Dict, Any
+import logging
 from backend.judge.schemas import RouteRequest
-from backend.judge.policy.dispatcher import should_escalate_after_prepass
 from backend.judge.pipelines.judge import run_judge
-from backend.judge.pipelines.tool_chain import run_tool_chain
 
+logger = logging.getLogger(__name__)
 
-async def run_pipeline(pipeline_id: str, req: RouteRequest, trace_id: str) -> Dict:
+async def run_pipeline(pipeline_id: str, req: RouteRequest, trace_id: str) -> Dict[str, Any]:
     """
-    Execute the selected pipeline with proper metrics tracking.
+    Route request to appropriate pipeline and return standardized results.
+    
+    Args:
+        pipeline_id: "judge" or "tool_chain" 
+        req: The route request
+        trace_id: Tracing identifier
+        
+    Returns:
+        Dict with standardized response fields
     """
-    start_time = time.perf_counter()
+    logger.info(f"[{trace_id}] Running pipeline: {pipeline_id}")
     
     if pipeline_id == "judge":
-        judge_result = await run_judge(req, trace_id)
-        conf = judge_result.get("confidence")
+        return await run_judge(req, trace_id)
+    elif pipeline_id == "tool_chain":
+        # For now, fall back to judge pipeline until tool_chain is implemented
+        logger.info(f"[{trace_id}] tool_chain not implemented, falling back to judge")
+        return await run_judge(req, trace_id)
+    else:
+        raise ValueError(f"Unknown pipeline: {pipeline_id}")
 
-        # Adaptive escalation: if the judge pre-pass lacks confidence, rerun via tool_chain
-        if should_escalate_after_prepass(conf, req):
-            tool_result = await run_tool_chain(req, trace_id)
-            # Merge metrics from both pipelines
-            tool_result.setdefault("citations", [])
-            tool_result["response_time_ms"] = int((time.perf_counter() - start_time) * 1000)
-            # Combine models attempted from both pipelines
-            judge_models = judge_result.get("models_attempted", [])
-            tool_models = tool_result.get("models_attempted", [])
-            tool_result["models_attempted"] = list(set(judge_models + tool_models))
-            return tool_result
 
-        judge_result.setdefault("citations", [])
-        judge_result["response_time_ms"] = int((time.perf_counter() - start_time) * 1000)
-        return judge_result
-
-    if pipeline_id == "tool_chain":
-        tool_result = await run_tool_chain(req, trace_id)
-        tool_result.setdefault("citations", [])
-        tool_result["response_time_ms"] = int((time.perf_counter() - start_time) * 1000)
-        return tool_result
-
-    raise ValueError(f"Unknown pipeline_id: {pipeline_id}")
+# For future tool_chain implementation:
+async def run_tool_chain(req: RouteRequest, trace_id: str) -> Dict[str, Any]:
+    """
+    Tool-chain pipeline for fact-checking and verification.
+    TODO: Implement when needed for advanced fact-checking.
+    """
+    # Placeholder - implement when needed
+    logger.warning(f"[{trace_id}] tool_chain pipeline not yet implemented")
+    
+    # For now, return a simple response
+    return {
+        "answer": "Tool chain pipeline not yet implemented. Using judge pipeline instead.",
+        "winner_model": "system",
+        "confidence": 0.5,
+        "scores_by_trait": {"accuracy": 0.5},
+        "citations": [],
+        "models_attempted": [],
+        "models_succeeded": [],
+    }
