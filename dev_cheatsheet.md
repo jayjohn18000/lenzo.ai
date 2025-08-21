@@ -13,10 +13,7 @@ python3 -m venv .venv
 ```bash
 source .venv/bin/activate
 ```
-- Fish shell:
-```bash
-source .venv/bin/activate.fish
-```
+
 - Windows (PowerShell):
 ```powershell
 .venv\Scripts\Activate.ps1
@@ -77,6 +74,74 @@ git push origin main
 ```bash
 git fetch origin
 git reset --hard origin/main
+```
+
+---
+
+## Uvicorn (FastAPI/ASGI Server)
+
+### Run app with reload (development)
+```bash
+python -m uvicorn backend.main:app --reload
+```
+
+### Specify host and port
+```bash
+python -m uvicorn backend.main:app --host 0.0.0.0 --port 8000 --reload
+```
+
+### Run with workers (production-style)
+```bash
+python -m uvicorn backend.main:app --host 0.0.0.0 --port 8000 --workers 4
+```
+
+---
+
+## Docker Commands
+
+### Build Docker Image
+```bash
+docker build -t myapp:latest .
+```
+
+### Run Container
+```bash
+docker run -d -p 8000:8000 myapp:latest
+```
+
+### List Running Containers
+```bash
+docker ps
+```
+
+### Stop Container
+```bash
+docker stop <container_id>
+```
+
+### Remove Container
+```bash
+docker rm <container_id>
+```
+
+### Remove Image
+```bash
+docker rmi <image_id>
+```
+
+### View Logs
+```bash
+docker logs -f <container_id>
+```
+
+### Exec into Running Container
+```bash
+docker exec -it <container_id> /bin/bash
+```
+
+### Clean up unused resources
+```bash
+docker system prune -af
 ```
 
 ---
