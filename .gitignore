@@ -1,5 +1,53 @@
-# Environment files
+# Python
+__pycache__/
+*.py[cod]
+*.pyo
+*.egg-info/
+.eggs/
+.dist-info/
+.pytest_cache/
+.mypy_cache/
+.coverage
+htmlcov/
+
+# Environments
 .env
-*.env
-.env
-*.env
+.env.*
+.venv/
+venv/
+env/
+.conda/
+.rye/
+.python-version
+
+# OS / Editors
+.DS_Store
+Thumbs.db
+.idea/
+.vscode/
+
+# Builds / Caches
+build/
+dist/
+*.log
+logs/
+.cache/
+node_modules/
+
+# Data & Artifacts
+*.sqlite
+*.sqlite3
+*.db
+*.parquet
+*.csv
+*.tsv
+*.zip
+*.tar
+*.tar.gz
+*.pt
+*.bin
+*.h5
+*.ckpt
+models/
+checkpoints/
+artifacts/
