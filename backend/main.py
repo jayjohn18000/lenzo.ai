@@ -16,7 +16,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.middleware.trustedhost import TrustedHostMiddleware
 from fastapi.responses import JSONResponse
 import redis
-from sqlalchemy import create_engine
+from sqlalchemy import create_engine, text
 from sqlalchemy.orm import sessionmaker
 
 # Import all the enhanced components
@@ -158,22 +158,22 @@ app.include_router(api_router)
 @app.get("/health", response_model=HealthResponse)
 async def enhanced_health_check():
     """Comprehensive health check with system diagnostics"""
-    health_status = "ok"
+    health_status = "healthy"
     checks = {}
     
     # Check API keys
     api_key_ok = bool(settings.OPENROUTER_API_KEY)
-    checks["api_keys"] = "ok" if api_key_ok else "error"
+    checks["api_keys"] = "healthy" if api_key_ok else "unhealthy"
     
     # Check Redis
     redis_ok = True
     if redis_client:
         try:
             redis_client.ping()
-            checks["redis"] = "ok"
+            checks["redis"] = "healthy"
         except:
             redis_ok = False
-            checks["redis"] = "error"
+            checks["redis"] = "unhealthy"
     else:
         redis_ok = False
         checks["redis"] = "not_configured"
@@ -183,11 +183,11 @@ async def enhanced_health_check():
     try:
         engine = create_engine(settings.DATABASE_URL)
         with engine.connect() as conn:
-            conn.execute("SELECT 1")
-        checks["database"] = "ok"
+            conn.execute(text("SELECT 1"))
+        checks["database"] = "healthy"
     except Exception as e:
         db_ok = False
-        checks["database"] = "error"
+        checks["database"] = "unhealthy"
         logger.error(f"Database health check failed: {e}")
     
     # Check model availability
@@ -196,7 +196,7 @@ async def enhanced_health_check():
     
     # Overall status
     if not (api_key_ok and db_ok):
-        health_status = "error"
+        health_status = "unhealthy"
     elif not redis_ok:
         health_status = "degraded"
     

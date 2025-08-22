@@ -96,7 +96,7 @@ class RouteResponse(BaseModel):
 
 
 class HealthResponse(BaseModel):
-    status: Literal["ok", "degraded"]
+    status: Literal["healthy", "degraded", "unhealthy"]
     # NEW: Health details
     available_models: Optional[int] = None
     last_test_time: Optional[str] = None
