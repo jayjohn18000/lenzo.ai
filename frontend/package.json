@@ -6,7 +6,9 @@
     "dev": "next dev",
     "build": "next build",
     "start": "next start",
-    "lint": "next lint"
+    "lint": "next lint",
+    "install:force": "npm install --force",
+    "install:legacy": "npm install --legacy-peer-deps"
   },
   "dependencies": {
     "@radix-ui/react-label": "^2.0.2",
@@ -14,21 +16,37 @@
     "@radix-ui/react-switch": "^1.0.3",
     "class-variance-authority": "^0.7.0",
     "clsx": "^2.1.0",
-    "lucide-react": "^0.309.0",
-    "next": "15.1.6",
-    "react": "^19.0.0",
-    "react-dom": "^19.0.0",
+    "lucide-react": "^0.453.0",
+    "next": "^15.5.0",
+    "react": "19.1.0",
+    "react-dom": "19.1.0",
     "tailwind-merge": "^2.2.0"
   },
   "devDependencies": {
-    "@tailwindcss/postcss": "^4.1.11",
     "@types/node": "^20",
-    "@types/react": "^19.1.9",
+    "@types/react": "^19",
     "@types/react-dom": "^19",
-    "eslint": "^8",
+    "eslint": "^9",
     "eslint-config-next": "15.1.6",
     "postcss": "^8",
     "tailwindcss": "^4.1.11",
     "typescript": "^5"
+  },
+  "overrides": {
+    "lucide-react": {
+      "react": "$react"
+    },
+    "@radix-ui/react-label": {
+      "react": "$react",
+      "react-dom": "$react-dom"
+    },
+    "@radix-ui/react-progress": {
+      "react": "$react",
+      "react-dom": "$react-dom"
+    },
+    "@radix-ui/react-switch": {
+      "react": "$react",
+      "react-dom": "$react-dom"
+    }
   }
 }

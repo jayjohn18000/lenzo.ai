@@ -28,13 +28,13 @@ import {
 interface QueryResult {
   request_id: string;
   answer: string;
-  confidence: float;
+  confidence: number;
   models_used: string[];
   winner_model: string;
   response_time_ms: number;
-  estimated_cost: float;
+  estimated_cost: number;
   reasoning?: string;
-  trust_metrics?: Record<string, float>;
+  trust_metrics?: Record<string, number>;
 }
 
 interface ModelMetrics {

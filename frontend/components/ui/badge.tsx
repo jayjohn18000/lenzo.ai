@@ -1,4 +1,3 @@
-
 // frontend/components/ui/badge.tsx
 "use client";
 
