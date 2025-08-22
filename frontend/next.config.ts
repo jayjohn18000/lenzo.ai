@@ -2,9 +2,9 @@ import path from "path";
 import type { NextConfig } from "next";
 
 const nextConfig: NextConfig = {
+  outputFileTracingRoot: path.join(__dirname, '../'),
   webpack: (config) => {
-    // point @ to the *current* folder (frontend root)
-    config.resolve.alias["@"]= path.resolve(__dirname);
+    config.resolve.alias["@"] = path.resolve(__dirname);
     return config;
   },
 };
