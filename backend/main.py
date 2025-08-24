@@ -29,6 +29,7 @@ from backend.auth.api_key import Base, verify_api_key
 from backend.api.v1.routes import router as api_router
 from backend.judge.model_selector import SmartModelSelector
 from backend.judge.steps.enhanced_scoring import EnhancedScorer
+from backend.judge.steps.fanout import fanout_health_check
 
 # Configure logging
 logging.basicConfig(
@@ -155,57 +156,72 @@ async def log_requests(request, call_next):
 app.include_router(api_router)
 
 # Enhanced health check with comprehensive system status
-@app.get("/health", response_model=HealthResponse)
+@app.get("/health")
 async def enhanced_health_check():
-    """Comprehensive health check with system diagnostics"""
-    health_status = "healthy"
-    checks = {}
+    """Enhanced health check with fanout system integration"""
+    health_data = {
+        "status": "healthy",
+        "timestamp": time.time(),
+        "version": "2.1.0",
+        "services": {}
+    }
     
     # Check API keys
     api_key_ok = bool(settings.OPENROUTER_API_KEY)
-    checks["api_keys"] = "healthy" if api_key_ok else "unhealthy"
+    health_data["services"]["api_keys"] = "healthy" if api_key_ok else "unhealthy"
     
-    # Check Redis
-    redis_ok = True
-    if redis_client:
-        try:
-            redis_client.ping()
-            checks["redis"] = "healthy"
-        except:
-            redis_ok = False
-            checks["redis"] = "unhealthy"
-    else:
-        redis_ok = False
-        checks["redis"] = "not_configured"
-    
-    # Check database
-    db_ok = True
+    # Check Redis (if you have redis_client)
     try:
+        if hasattr(app.state, 'redis_client') and app.state.redis_client:
+            await app.state.redis_client.ping()
+            health_data["services"]["redis"] = "healthy"
+        else:
+            health_data["services"]["redis"] = "not_configured"
+    except Exception as e:
+        health_data["services"]["redis"] = f"unhealthy: {str(e)}"
+        health_data["status"] = "degraded"
+    
+    # Check Database
+    try:
+        from sqlalchemy import create_engine
         engine = create_engine(settings.DATABASE_URL)
         with engine.connect() as conn:
-            conn.execute(text("SELECT 1"))
-        checks["database"] = "healthy"
+            conn.execute("SELECT 1")
+        health_data["services"]["database"] = "healthy"
     except Exception as e:
-        db_ok = False
-        checks["database"] = "unhealthy"
-        logger.error(f"Database health check failed: {e}")
+        health_data["services"]["database"] = f"unhealthy: {str(e)}"
+        health_data["status"] = "degraded"
     
-    # Check model availability
-    available_models = len(settings.DEFAULT_MODELS) if api_key_ok else 0
-    checks["models"] = f"{available_models}_available"
+    # MOST IMPORTANT: Check Fanout System with circuit breaker status
+    try:
+        fanout_health = await fanout_health_check()
+        available_models = fanout_health["available_models"]["currently_available"]
+        total_models = fanout_health["available_models"]["total_configured"]
+        
+        if available_models > 0:
+            health_data["services"]["fanout"] = f"healthy ({available_models}/{total_models} models)"
+        else:
+            health_data["services"]["fanout"] = "unhealthy (no models available)"
+            health_data["status"] = "unhealthy"
+            
+        health_data["fanout_details"] = fanout_health
+        
+        # Add this for compatibility with the test
+        health_data["available_models"] = available_models
+        health_data["total_models"] = total_models
+        
+    except Exception as e:
+        health_data["services"]["fanout"] = f"unhealthy: {str(e)}"
+        health_data["status"] = "degraded"
+        health_data["available_models"] = 0
+        health_data["total_models"] = 0
     
-    # Overall status
-    if not (api_key_ok and db_ok):
-        health_status = "unhealthy"
-    elif not redis_ok:
-        health_status = "degraded"
+    # Overall status determination
+    unhealthy_services = [k for k, v in health_data["services"].items() if "unhealthy" in str(v)]
+    if unhealthy_services:
+        health_data["status"] = "unhealthy"
     
-    return HealthResponse(
-        status=health_status,
-        available_models=available_models,
-        last_test_time=None,
-        checks=checks
-    )
+    return health_data
 
 # Enhanced route endpoint with all new features
 @app.post("/route", response_model=RouteResponse)
@@ -353,6 +369,43 @@ async def root():
         "health_check": "/health",
         "api_base": "/api/v1"
     }
+
+# Add this endpoint to your main.py to reset the circuit breaker
+
+@app.post("/admin/reset-circuit-breaker")
+async def reset_circuit_breaker():
+    """Reset the circuit breaker to allow all models again"""
+    try:
+        # Import the circuit breaker from fanout
+        from backend.judge.steps.fanout import circuit_breaker
+        
+        # Reset the circuit breaker
+        circuit_breaker.failure_count.clear()
+        circuit_breaker.last_failure_time.clear()
+        
+        logger.info("🔄 Circuit breaker reset successfully")
+        
+        # Check the fanout health after reset
+        fanout_health = await fanout_health_check()
+        
+        return {
+            "status": "success",
+            "message": "Circuit breaker reset successfully",
+            "available_models_after_reset": fanout_health["available_models"]["currently_available"],
+            "total_models": fanout_health["available_models"]["total_configured"]
+        }
+        
+    except ImportError:
+        return {
+            "status": "error", 
+            "message": "Circuit breaker not available - using basic fanout system"
+        }
+    except Exception as e:
+        logger.error(f"Error resetting circuit breaker: {e}")
+        return {
+            "status": "error",
+            "message": f"Failed to reset circuit breaker: {str(e)}"
+        }
 
 if __name__ == "__main__":
     import uvicorn
