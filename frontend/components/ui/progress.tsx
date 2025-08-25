@@ -1,32 +1,48 @@
-// frontend/components/ui/progress.tsx
+// components/ui/progress.tsx
 "use client";
-
-import * as React from "react";
+import React from "react";
 import { cn } from "@/lib/utils";
 
-interface ProgressProps extends React.HTMLAttributes<HTMLDivElement> {
+export interface ProgressProps extends React.HTMLAttributes<HTMLDivElement> {
   value?: number;
+  max?: number;
+  showValue?: boolean;
+  variant?: "default" | "gradient" | "glow";
 }
 
-const Progress = React.forwardRef<HTMLDivElement, ProgressProps>(
-  ({ className, value = 0, ...props }, ref) => {
-    return (
-      <div
-        ref={ref}
-        className={cn(
-          "relative h-4 w-full overflow-hidden rounded-full bg-gray-100",
-          className
-        )}
-        {...props}
-      >
-        <div
-          className="h-full w-full flex-1 bg-blue-600 transition-all"
-          style={{ transform: `translateX(-${100 - (value || 0)}%)` }}
-        />
-      </div>
-    );
-  }
-);
-Progress.displayName = "Progress";
+export function Progress({ 
+  value = 0, 
+  max = 100, 
+  className, 
+  showValue = false,
+  variant = "default",
+  ...props
+}: ProgressProps) {
+  const percentage = Math.min(100, Math.max(0, (value / max) * 100));
 
-export { Progress };
+  const variants = {
+    default: "bg-blue-500",
+    gradient: "bg-gradient-to-r from-red-500 via-yellow-500 to-green-500",
+    glow: "bg-blue-500 shadow-lg shadow-blue-500/30"
+  };
+
+  return (
+    <div 
+      className={cn("relative w-full overflow-hidden rounded-full bg-white/20 h-2", className)} 
+      {...props}
+    >
+      <div
+        className={cn(
+          "h-full w-full flex-1 transition-all duration-500 ease-out",
+          variants[variant]
+        )}
+        style={{ transform: `translateX(-${100 - percentage}%)` }}
+      />
+      {showValue && (
+        <div className="absolute inset-0 flex items-center justify-center text-xs font-semibold text-white">
+          {percentage.toFixed(1)}%
+        </div>
+      )}
+    </div>
+  );
+}

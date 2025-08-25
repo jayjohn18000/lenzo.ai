@@ -342,6 +342,62 @@ async def general_exception_handler(request, exc):
         }
     )
 
+@app.post("/dev/route", response_model=RouteResponse)  
+async def dev_route(req: RouteRequest, background_tasks: BackgroundTasks):
+    """
+    Development route without authentication for local testing.
+    Remove this in production!
+    """
+    if not settings.DEBUG:
+        raise HTTPException(status_code=404, detail="Not found")
+    
+    logger.info("🧪 Using development route (no auth)")
+    
+    # Create mock API key info for development
+    mock_api_key_info = {
+        "user_id": 1,
+        "user_email": "dev@localhost",
+        "subscription_tier": "professional",  # Give full access for development
+        "api_key_id": 1
+    }
+    
+    # Call the existing enhanced_route function with mock auth
+    return await enhanced_route(req, background_tasks, mock_api_key_info)
+
+# Also add a simple health check without auth
+@app.get("/dev/health")
+async def dev_health():
+    """Simple health check for development"""
+    if not settings.DEBUG:
+        raise HTTPException(status_code=404, detail="Not found")
+    
+    return {
+        "status": "ok",
+        "mode": "development",
+        "message": "NextAGI development server running"
+    }
+
+# debug_routes.py - Add this temporarily to your backend/main.py
+
+@app.get("/debug/routes")
+async def debug_routes():
+    """Debug endpoint to see all available routes"""
+    routes = []
+    for route in app.routes:
+        if hasattr(route, 'path') and hasattr(route, 'methods'):
+            routes.append({
+                "path": route.path,
+                "methods": list(route.methods) if route.methods else [],
+                "name": getattr(route, 'name', 'unnamed')
+            })
+    return {"available_routes": routes}
+
+# Also add a test endpoint without authentication
+@app.get("/test/ping")
+async def test_ping():
+    """Simple test endpoint without auth"""
+    return {"message": "pong", "timestamp": time.time()}
+
 # Root endpoint
 @app.get("/")
 async def root():
@@ -353,6 +409,43 @@ async def root():
         "health_check": "/health",
         "api_base": "/api/v1"
     }
+
+# Add this to backend/main.py - Development endpoint without auth
+
+@app.post("/dev/query") 
+async def dev_query(req: dict):
+    """Development endpoint without authentication - REMOVE IN PRODUCTION"""
+    if not settings.DEBUG:
+        raise HTTPException(status_code=404, detail="Not found")
+    
+    logger.info("🧪 Using development query endpoint (no auth)")
+    
+    try:
+        # Simple mock response for testing
+        prompt = req.get("prompt", "test")
+        
+        # Return a simple mock response
+        return {
+            "request_id": "dev-test-123",
+            "answer": f"Development mode response for: '{prompt}'. Your text input is working! Backend connection successful.",
+            "confidence": 0.95,
+            "winner_model": "development-mock",
+            "response_time_ms": 150,
+            "models_used": ["mock-model-1", "mock-model-2"],
+            "reasoning": "This is a development mock response to test connectivity."
+        }
+        
+    except Exception as e:
+        logger.error(f"Dev endpoint error: {e}")
+        return {
+            "request_id": "dev-error",
+            "answer": f"Development endpoint error: {str(e)}",
+            "confidence": 0.0,
+            "winner_model": "error",
+            "response_time_ms": 0,
+            "models_used": [],
+            "reasoning": None
+        }
 
 if __name__ == "__main__":
     import uvicorn

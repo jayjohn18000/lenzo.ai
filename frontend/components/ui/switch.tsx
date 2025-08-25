@@ -1,31 +1,62 @@
-// frontend/components/ui/switch.tsx
+// components/ui/switch.tsx
 "use client";
+import React, { useState, useEffect } from "react";
+import { cn } from "@/lib/utils";
 
-import * as React from "react";
-
-interface SwitchProps extends React.InputHTMLAttributes<HTMLInputElement> {
+export interface SwitchProps {
+  checked?: boolean;
   onCheckedChange?: (checked: boolean) => void;
+  disabled?: boolean;
+  id?: string;
+  className?: string;
+  'aria-label'?: string;
 }
 
-export function Switch({ className = "", onCheckedChange, ...props }: SwitchProps) {
-  const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    if (onCheckedChange) {
-      onCheckedChange(e.target.checked);
-    }
-    if (props.onChange) {
-      props.onChange(e);
-    }
+export function Switch({ 
+  checked = false, 
+  onCheckedChange, 
+  disabled = false,
+  id,
+  className,
+  ...props
+}: SwitchProps) {
+  const [isChecked, setIsChecked] = useState(checked);
+
+  useEffect(() => {
+    setIsChecked(checked);
+  }, [checked]);
+
+  const handleToggle = () => {
+    if (disabled) return;
+    const newValue = !isChecked;
+    setIsChecked(newValue);
+    onCheckedChange?.(newValue);
   };
 
   return (
-    <label className="relative inline-flex items-center cursor-pointer">
-      <input
-        type="checkbox"
-        className="sr-only peer"
-        onChange={handleChange}
-        {...props}
+    <button
+      type="button"
+      role="switch"
+      aria-checked={isChecked}
+      id={id}
+      className={cn(
+        "peer inline-flex h-6 w-11 shrink-0 cursor-pointer items-center rounded-full border-2 border-transparent transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-blue-400 focus-visible:ring-offset-2 focus-visible:ring-offset-background disabled:cursor-not-allowed disabled:opacity-50",
+        isChecked 
+          ? "bg-blue-500 shadow-lg shadow-blue-500/30" 
+          : "bg-gray-600",
+        disabled && "opacity-50 cursor-not-allowed",
+        className
+      )}
+      onClick={handleToggle}
+      disabled={disabled}
+      {...props}
+    >
+      <span
+        className={cn(
+          "pointer-events-none block h-5 w-5 rounded-full bg-white shadow-lg ring-0 transition-transform",
+          isChecked ? "translate-x-5" : "translate-x-0"
+        )}
       />
-      <div className="w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-blue-300 dark:peer-focus:ring-blue-800 rounded-full peer dark:bg-gray-700 peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all dark:border-gray-600 peer-checked:bg-blue-600"></div>
-    </label>
+    </button>
   );
 }

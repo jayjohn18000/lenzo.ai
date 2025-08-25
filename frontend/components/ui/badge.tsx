@@ -1,41 +1,33 @@
-// frontend/components/ui/badge.tsx
+// components/ui/badge.tsx
 "use client";
-
-import * as React from "react";
+import { ReactNode, HTMLAttributes } from "react";
 import { cn } from "@/lib/utils";
 
-export type BadgeVariant = "default" | "secondary" | "destructive" | "outline";
-
-export interface BadgeProps extends React.HTMLAttributes<HTMLDivElement> {
-  variant?: BadgeVariant;
-  children?: React.ReactNode;
+interface BadgeProps extends HTMLAttributes<HTMLDivElement> {
+  children: ReactNode;
+  variant?: "default" | "secondary" | "destructive" | "outline" | "success" | "warning";
 }
 
-function Badge({ 
-  className, 
-  variant = "default", 
-  children,
-  ...props 
-}: BadgeProps) {
-  const variants: Record<BadgeVariant, string> = {
-    default: "border-transparent bg-blue-600 text-white hover:bg-blue-700",
-    secondary: "border-transparent bg-gray-100 text-gray-900 hover:bg-gray-200",
-    destructive: "border-transparent bg-red-500 text-white hover:bg-red-600",
-    outline: "text-gray-700 border-gray-300"
+export function Badge({ children, className, variant = "default", ...props }: BadgeProps) {
+  const variants = {
+    default: "bg-blue-500/20 text-blue-400 border border-blue-500/30",
+    secondary: "bg-gray-500/20 text-gray-300 border border-gray-500/30",
+    destructive: "bg-red-500/20 text-red-400 border border-red-500/30",
+    outline: "text-gray-300 border border-gray-500/30",
+    success: "bg-green-500/20 text-green-400 border border-green-500/30",
+    warning: "bg-yellow-500/20 text-yellow-400 border border-yellow-500/30"
   };
 
   return (
-    <div 
+    <div
       className={cn(
-        "inline-flex items-center rounded-full border px-2.5 py-0.5 text-xs font-semibold transition-colors focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2",
+        "inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-semibold transition-colors focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2",
         variants[variant],
         className
-      )} 
+      )}
       {...props}
     >
       {children}
     </div>
   );
 }
-
-export { Badge };
