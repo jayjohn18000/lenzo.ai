@@ -513,6 +513,221 @@ class SmartModelSelector:
         fallback_scores.sort(key=lambda x: x[1], reverse=True)
         return [model[0] for model in fallback_scores[:2]]
 
+# ADD THIS METHOD to your SmartModelSelector class
+def get_model_specs_for_routes(self) -> Dict[str, Dict]:
+    """
+    Get model specifications formatted for the enhanced routes.py
+    This ensures consistency between model_selector and routes.
+    """
+    return {
+        name: {
+            "cost_per_1k_tokens": spec.cost_per_1k_tokens,
+            "avg_response_time_ms": spec.avg_response_time_ms,
+            "quality_score": spec.quality_score,
+            "strengths": [s.value for s in spec.strengths],
+            "context_window": spec.context_window,
+            "supports_function_calling": spec.supports_function_calling,
+            "supports_vision": spec.supports_vision
+        }
+        for name, spec in self.model_specs.items()
+    }
+
+# ADD THIS METHOD to your SmartModelSelector class  
+def calculate_response_confidence(self, 
+                                candidate_text: str,
+                                model_name: str,
+                                response_time_ms: int,
+                                query_type: QueryType) -> float:
+    """
+    Calculate confidence score for a model response.
+    Integrates with the enhanced routes confidence calculation.
+    """
+    base_confidence = 0.7
+    
+    # Text quality assessment
+    text_length = len(candidate_text.split())
+    if 20 <= text_length <= 200:
+        base_confidence += 0.1
+    elif text_length < 10:
+        base_confidence -= 0.2
+    
+    # Response time factor based on model specs
+    if model_name in self.model_specs:
+        expected_time = self.model_specs[model_name].avg_response_time_ms
+        time_ratio = response_time_ms / expected_time
+        if 0.5 <= time_ratio <= 2.0:
+            base_confidence += 0.05
+        elif time_ratio > 3.0:
+            base_confidence -= 0.1
+    
+    # Model strength alignment with query type
+    if model_name in self.model_specs:
+        model_strengths = self.model_specs[model_name].strengths
+        if query_type in model_strengths:
+            base_confidence += 0.1
+    
+    # Text quality heuristics
+    text_lower = candidate_text.lower()
+    if any(phrase in text_lower for phrase in ['i apologize', 'i cannot', 'unclear']):
+        base_confidence -= 0.1
+    
+    if any(phrase in text_lower for phrase in ['based on', 'according to', 'research shows']):
+        base_confidence += 0.1
+    
+    # Performance history bonus
+    if model_name in self.performance_history:
+        history_bonus = self.performance_history[model_name].get("avg_confidence", 0.5) * 0.1
+        base_confidence += history_bonus
+    
+    return max(0.0, min(1.0, base_confidence))
+
+# ADD THIS METHOD to your SmartModelSelector class
+def update_from_route_response(self, 
+                              route_result: Dict,
+                              selected_models: List[str],
+                              response_time_ms: int):
+    """
+    Update model performance history from route response data.
+    Call this after each successful route execution.
+    """
+    winner_model = route_result.get("winner_model")
+    confidence = route_result.get("confidence", 0.5)
+    
+    # Update performance for all attempted models
+    for model in selected_models:
+        success = (model == winner_model)
+        self.update_performance_history(
+            model_name=model,
+            success=success,
+            response_time=response_time_ms,
+            confidence_score=confidence if success else confidence * 0.7
+        )
+
+# ADD THIS METHOD to your SmartModelSelector class
+def get_enhanced_model_details(self, 
+                              candidates: List,  # Candidate objects
+                              judge_scores: Dict = None) -> List[Dict]:
+    """
+    Generate enhanced model details for frontend display.
+    Integrates candidate data with model specs and scoring.
+    """
+    model_details = []
+    
+    for i, candidate in enumerate(candidates):
+        # Get query type for context
+        query_type, _ = self.classify_query(candidate.text[:100])  # Sample classification
+        
+        # Calculate confidence using integrated scoring
+        confidence = self.calculate_response_confidence(
+            candidate.text,
+            candidate.model,
+            candidate.gen_time_ms,
+            query_type
+        )
+        
+        # Apply judge scores if available
+        if judge_scores and i in judge_scores:
+            scores = judge_scores[i]
+            if isinstance(scores, dict) and scores:
+                judge_avg = sum(scores.values()) / len(scores)
+                confidence = (confidence + judge_avg) / 2
+        
+        # Calculate cost
+        cost = self.estimate_token_cost(
+            candidate.model,
+            candidate.tokens_in,
+            candidate.tokens_out
+        )
+        
+        model_details.append({
+            "model": candidate.model,
+            "response": candidate.text,
+            "confidence": confidence,
+            "response_time_ms": candidate.gen_time_ms,
+            "tokens_used": candidate.tokens_in + candidate.tokens_out,
+            "cost": cost,
+            "error": None,
+            "performance_tier": getattr(candidate, 'performance_tier', 'medium')
+        })
+    
+    return model_details
+
+# ADD THIS METHOD to your SmartModelSelector class
+def estimate_token_cost(self, model: str, tokens_in: int, tokens_out: int) -> float:
+    """
+    Estimate cost based on model specs and token usage.
+    Uses actual model specifications from the selector.
+    """
+    if model in self.model_specs:
+        cost_per_1k = self.model_specs[model].cost_per_1k_tokens
+        total_tokens = tokens_in + tokens_out
+        return (total_tokens / 1000) * cost_per_1k
+    
+    # Fallback cost estimation
+    return (tokens_in + tokens_out) / 1000 * 0.002  # Conservative estimate
+
+# ADD THIS METHOD to your SmartModelSelector class
+def generate_selection_reasoning(self, 
+                                candidates: List,
+                                winner_model: str,
+                                query_type: QueryType,
+                                selection_mode: SelectionMode) -> str:
+    """
+    Generate detailed reasoning for model selection decision.
+    Provides transparency into the selection process.
+    """
+    total_models = len(candidates)
+    avg_response_time = sum(c.gen_time_ms for c in candidates) / total_models if candidates else 0
+    avg_confidence = sum(self.calculate_response_confidence(c.text, c.model, c.gen_time_ms, query_type) 
+                        for c in candidates) / total_models if candidates else 0
+    
+    reasoning = f"""Model Selection Analysis:
+
+• Query Type: {query_type.value.title()} (confidence-based classification)
+• Selection Mode: {selection_mode.value.title()}
+• Models Consulted: {total_models} simultaneously
+• Winner: {winner_model.split('/')[-1] if '/' in winner_model else winner_model}
+
+Performance Metrics:
+• Average response time: {avg_response_time:.0f}ms
+• Average confidence: {avg_confidence:.1%}
+• Selection based on: {self._get_selection_criteria(selection_mode)}
+
+Model Strengths Applied:
+{self._explain_model_strengths(candidates, query_type)}
+
+Winner selected based on optimal balance of quality, speed, cost, and domain expertise for this query type."""
+
+    return reasoning
+
+# ADD THIS HELPER METHOD to your SmartModelSelector class
+def _get_selection_criteria(self, mode: SelectionMode) -> str:
+    """Get human-readable selection criteria for the mode"""
+    criteria = {
+        SelectionMode.SPEED: "Response time optimization, maintaining quality threshold",
+        SelectionMode.QUALITY: "Maximum output quality, domain expertise alignment",
+        SelectionMode.BALANCED: "Optimal balance of speed, quality, and cost efficiency", 
+        SelectionMode.COST: "Cost optimization while maintaining acceptable quality"
+    }
+    return criteria.get(mode, "Balanced optimization")
+
+# ADD THIS HELPER METHOD to your SmartModelSelector class  
+def _explain_model_strengths(self, candidates: List, query_type: QueryType) -> str:
+    """Explain how model strengths align with query type"""
+    explanations = []
+    
+    for candidate in candidates:
+        if candidate.model in self.model_specs:
+            model_spec = self.model_specs[candidate.model]
+            model_name = candidate.model.split('/')[-1]
+            
+            if query_type in model_spec.strengths:
+                explanations.append(f"• {model_name}: Specialized in {query_type.value} tasks")
+            else:
+                explanations.append(f"• {model_name}: General-purpose model for comparison")
+    
+    return '\n'.join(explanations) if explanations else "• All models provide general-purpose capabilities"
+
 # Integration helper functions
 def select_models_for_request(prompt: str, 
                             mode: str = "balanced",
@@ -533,3 +748,38 @@ def estimate_cost(models: List[str], prompt: str) -> Dict:
     selector = SmartModelSelector()
     prompt_tokens = len(prompt.split()) * 1.3  # Rough tokenization estimate
     return selector.estimate_request_cost(models, int(prompt_tokens))
+
+def integrate_with_enhanced_routes(selector_instance: SmartModelSelector,
+                                  candidates: List,
+                                  judge_scores: Dict,
+                                  query_type: QueryType,
+                                  selection_mode: SelectionMode,
+                                  winner_model: str) -> Dict[str, Any]:
+    """
+    Main integration function that ties model_selector with enhanced routes.
+    Call this from your enhanced routes.py to get all the detailed data.
+    """
+    # Get enhanced model details
+    model_details = selector_instance.get_enhanced_model_details(candidates, judge_scores)
+    
+    # Find winner confidence
+    winner_confidence = 0.8  # Default
+    for detail in model_details:
+        if detail["model"] == winner_model:
+            winner_confidence = detail["confidence"]
+            break
+    
+    # Generate reasoning
+    reasoning = selector_instance.generate_selection_reasoning(
+        candidates, winner_model, query_type, selection_mode
+    )
+    
+    # Calculate total cost
+    total_cost = sum(detail["cost"] for detail in model_details)
+    
+    return {
+        "model_details": model_details,
+        "reasoning": reasoning,
+        "total_cost": total_cost,
+        "winner_confidence": winner_confidence
+    }
