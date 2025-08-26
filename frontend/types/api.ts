@@ -89,3 +89,18 @@ export interface QueryRequest {
     uptime_hours: number;
     version: string;
   }
+
+  export interface ModelMetrics {
+    model: string;
+    response: string;
+    confidence: number;
+    response_time_ms: number;
+    cost: number;
+    reliability_score: number;
+    consistency_score: number;
+    hallucination_risk: number;
+    citation_quality: number;
+    trait_scores: Record<string, number>;
+    rank_position: number;
+    is_winner: boolean;
+  }

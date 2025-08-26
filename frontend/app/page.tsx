@@ -1,8 +1,9 @@
 "use client";
-import { useState, useEffect } from "react";
+
+import { useState, useCallback, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
-import { Card, CardContent } from "@/components/ui/card";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
 import { Switch } from "@/components/ui/switch";
@@ -16,45 +17,68 @@ import {
   Shield,
   Clock,
   DollarSign,
-  Target
+  Target,
+  Trophy,
+  AlertTriangle,
+  CheckCircle,
+  BarChart3,
+  Eye,
+  Sparkles,
+  Code2
 } from "lucide-react";
 
-type Judgment = { 
-  judge_model: string; 
-  score01: number | null; 
-  label?: string; 
-  reasons: string; 
-  raw: string; 
-};
-type Aggregate = { 
-  score_mean?: number; 
-  score_stdev?: number; 
-  vote_top_label?: string; 
-  vote_top_count?: number; 
-  vote_total?: number; 
-};
-type Ranked = { 
-  model: string; 
-  aggregate: Aggregate; 
-  judgments: Judgment[]; 
-};
-type RouteResult = { 
-  prompt: string; 
-  responses: { model: string; response?: string }[]; 
-  ranking: Ranked[]; 
-  winner: { model: string; score?: number | null }; 
-};
+// Enhanced interfaces matching new functionality
+interface ModelMetrics {
+  model: string;
+  response: string;
+  confidence: number;
+  response_time_ms: number;
+  tokens_used: number;
+  cost: number;
+  reliability_score: number;
+  consistency_score: number;
+  hallucination_risk: number;
+  citation_quality: number;
+  trait_scores: Record<string, number>;
+  rank_position: number;
+  is_winner: boolean;
+  error?: string;
+}
+
+interface ModelComparison {
+  best_confidence: number;
+  worst_confidence: number;
+  avg_response_time: number;
+  total_cost: number;
+  performance_spread: number;
+  model_count: number;
+}
+
+interface QueryResult {
+  request_id: string;
+  answer: string;
+  confidence: number;
+  winner_model: string;
+  response_time_ms: number;
+  models_used: string[];
+  model_metrics: ModelMetrics[];
+  model_comparison: ModelComparison;
+  reasoning?: string;
+  total_cost: number;
+  scores_by_trait?: Record<string, number>;
+}
 
 export default function NextAGIInterface() {
   const [prompt, setPrompt] = useState("");
-  const [useAsk, setUseAsk] = useState(true);
-  const [judgeModels, setJudgeModels] = useState(
-    'openai/gpt-4, openai/gpt-4o, anthropic/claude-3-opus, anthropic/claude-3.5-sonnet'
-  );
-  const [result, setResult] = useState<RouteResult | null>(null);
+  const [mode, setMode] = useState("balanced");
+  const [useAdvanced, setUseAdvanced] = useState(true);
+  const [maxModels, setMaxModels] = useState("4");
+  const [budgetLimit, setBudgetLimit] = useState("");
+  const [result, setResult] = useState<QueryResult | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [mode, setMode] = useState("balanced");
+  const [selectedModel, setSelectedModel] = useState<string>("");
+  const [viewMode, setViewMode] = useState<"comparison" | "individual">("comparison");
   const [confidence, setConfidence] = useState(0);
   const [processingStep, setProcessingStep] = useState("");
   const [activeModels, setActiveModels] = useState<string[]>([]);
@@ -68,44 +92,54 @@ export default function NextAGIInterface() {
     "Generating final response..."
   ];
 
-  const handleSubmit = async () => {
+  const handleSubmit = useCallback(async () => {
+    if (!prompt.trim()) return;
+    
     setError(null);
     setLoading(true);
     setResult(null);
     setConfidence(0);
+    setSelectedModel("");
     
-    // Simulate processing animation
+    // Premium processing animation
     for (let i = 0; i < processingSteps.length; i++) {
       setProcessingStep(processingSteps[i]);
       await new Promise(resolve => setTimeout(resolve, 800));
       
       if (i >= 2) {
-        const modelNames = judgeModels.split(",").map(s => s.trim().split("/")[1] || s.trim());
+        const modelNames = ['GPT-4', 'Claude', 'Gemini', 'Mistral'];
         const modelIndex = Math.min(i - 2, modelNames.length - 1);
         if (modelNames[modelIndex]) {
-          setActiveModels(prev => [...prev, modelNames[modelIndex]]);
+          setActiveModels(prev => [...prev, modelNames[modelIndex].toLowerCase()]);
         }
       }
     }
 
     try {
-      const res = await fetch("/api/route", {
+      const response = await fetch("/api/v1/query", {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: { 
+          "Content-Type": "application/json",
+          "X-API-Key": "your-api-key-here"
+        },
         body: JSON.stringify({
-          prompt: prompt || "How did Napoleon Bonaparte grow well over 6 feet?",
-          responses: [],
-          judge_models: judgeModels.split(",").map(s => s.trim()).filter(Boolean),
-          use_ask: useAsk,
+          prompt,
+          mode,
+          max_models: parseInt(maxModels),
+          budget_limit: budgetLimit ? parseFloat(budgetLimit) : undefined,
         }),
       });
-      
-      if (!res.ok) throw new Error(`Backend error: ${res.status}`);
-      const data = (await res.json()) as RouteResult;
+
+      if (!response.ok) {
+        throw new Error(`API Error: ${response.status}`);
+      }
+
+      const data = await response.json();
       setResult(data);
+      setSelectedModel(data.winner_model || "");
       
       // Animate confidence score
-      const targetConfidence = data.winner?.score ? data.winner.score * 100 : 94.2;
+      const targetConfidence = data.confidence ? data.confidence * 100 : 94.2;
       let currentConf = 0;
       const interval = setInterval(() => {
         currentConf += 2;
@@ -116,13 +150,13 @@ export default function NextAGIInterface() {
         }
       }, 50);
       
-    } catch (e: any) {
-      setError(e.message ?? "Unknown error");
+    } catch (err: any) {
+      setError(err.message || "An error occurred");
     } finally {
       setLoading(false);
       setActiveModels([]);
     }
-  };
+  }, [prompt, mode, maxModels, budgetLimit]);
 
   const MetricCard = ({ title, value, trend, icon: Icon, color }: {
     title: string;
@@ -152,9 +186,188 @@ export default function NextAGIInterface() {
     </div>
   );
 
+  const getConfidenceColor = (confidence: number) => {
+    if (confidence >= 0.8) return "text-green-400 bg-green-400/20";
+    if (confidence >= 0.6) return "text-yellow-400 bg-yellow-400/20";
+    return "text-red-400 bg-red-400/20";
+  };
+
+  const getConfidenceIcon = (confidence: number) => {
+    if (confidence >= 0.8) return CheckCircle;
+    if (confidence >= 0.6) return AlertTriangle;
+    return AlertTriangle;
+  };
+
+  // Premium dark-themed model card
+  const PremiumModelCard = ({ metric, isSelected }: { metric: ModelMetrics; isSelected: boolean }) => {
+    const ConfidenceIcon = getConfidenceIcon(metric.confidence);
+    
+    return (
+      <Card className={`bg-white/5 backdrop-blur-xl border-white/10 transition-all duration-300 cursor-pointer hover:bg-white/10 hover:border-white/20 ${
+        isSelected ? "ring-2 ring-blue-400 bg-white/10" : ""
+      } ${metric.is_winner ? "border-yellow-500/50 bg-gradient-to-br from-yellow-500/10 to-transparent" : ""}`}
+      onClick={() => setSelectedModel(metric.model)}>
+        <CardHeader className="pb-3">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-2">
+              <CardTitle className="text-lg flex items-center gap-2 text-white">
+                {metric.is_winner && <Trophy className="h-4 w-4 text-yellow-400" />}
+                <span className="font-mono text-sm">{metric.model.split('/').pop()}</span>
+              </CardTitle>
+              <Badge className="bg-white/10 text-gray-300 border-white/20">
+                #{metric.rank_position}
+              </Badge>
+            </div>
+            <div className="flex items-center gap-2">
+              <ConfidenceIcon className={`h-4 w-4 ${getConfidenceColor(metric.confidence).split(' ')[0]}`} />
+              <Badge className={`${getConfidenceColor(metric.confidence)} border-0`}>
+                {(metric.confidence * 100).toFixed(1)}%
+              </Badge>
+            </div>
+          </div>
+        </CardHeader>
+        
+        <CardContent className="space-y-4">
+          {/* Response Preview */}
+          <div className="space-y-2">
+            <Label className="text-xs font-medium text-gray-400">Response</Label>
+            <p className="text-sm text-gray-300 bg-black/20 p-3 rounded-md line-clamp-3 border border-white/10">
+              {metric.response.length > 150 
+                ? metric.response.substring(0, 150) + "..."
+                : metric.response
+              }
+            </p>
+          </div>
+
+          {/* Metrics Grid */}
+          <div className="grid grid-cols-2 gap-3 text-sm">
+            <div className="space-y-1">
+              <div className="flex items-center gap-1">
+                <Clock className="h-3 w-3 text-gray-400" />
+                <span className="text-gray-400">Response</span>
+              </div>
+              <span className="font-semibold text-white">{metric.response_time_ms}ms</span>
+            </div>
+            
+            <div className="space-y-1">
+              <div className="flex items-center gap-1">
+                <DollarSign className="h-3 w-3 text-gray-400" />
+                <span className="text-gray-400">Cost</span>
+              </div>
+              <span className="font-semibold text-white">${metric.cost.toFixed(4)}</span>
+            </div>
+            
+            <div className="space-y-1">
+              <div className="flex items-center gap-1">
+                <Shield className="h-3 w-3 text-gray-400" />
+                <span className="text-gray-400">Reliability</span>
+              </div>
+              <span className="font-semibold text-green-400">{(metric.reliability_score * 100).toFixed(0)}%</span>
+            </div>
+            
+            <div className="space-y-1">
+              <div className="flex items-center gap-1">
+                <AlertTriangle className="h-3 w-3 text-gray-400" />
+                <span className="text-gray-400">Risk</span>
+              </div>
+              <span className="font-semibold text-red-400">{(metric.hallucination_risk * 100).toFixed(0)}%</span>
+            </div>
+          </div>
+
+          {/* Performance Bars with Dark Theme */}
+          <div className="space-y-3">
+            <div>
+              <div className="flex justify-between text-xs mb-2">
+                <span className="text-gray-400">Consistency</span>
+                <span className="text-white">{(metric.consistency_score * 100).toFixed(0)}%</span>
+              </div>
+              <div className="w-full bg-white/20 rounded-full h-2">
+                <div 
+                  className="bg-gradient-to-r from-blue-400 to-blue-500 h-2 rounded-full transition-all duration-500"
+                  style={{ width: `${metric.consistency_score * 100}%` }}
+                />
+              </div>
+            </div>
+            
+            <div>
+              <div className="flex justify-between text-xs mb-2">
+                <span className="text-gray-400">Citation Quality</span>
+                <span className="text-white">{(metric.citation_quality * 100).toFixed(0)}%</span>
+              </div>
+              <div className="w-full bg-white/20 rounded-full h-2">
+                <div 
+                  className="bg-gradient-to-r from-purple-400 to-purple-500 h-2 rounded-full transition-all duration-500"
+                  style={{ width: `${metric.citation_quality * 100}%` }}
+                />
+              </div>
+            </div>
+          </div>
+
+          {/* Trait Scores */}
+          {Object.keys(metric.trait_scores).length > 0 && (
+            <div className="space-y-1">
+              <Label className="text-xs font-medium text-gray-400">Key Traits</Label>
+              <div className="flex flex-wrap gap-1">
+                {Object.entries(metric.trait_scores).map(([trait, score]) => (
+                  <Badge key={trait} className="bg-white/10 text-gray-300 border-white/20 text-xs">
+                    {trait}: {(score * 100).toFixed(0)}%
+                  </Badge>
+                ))}
+              </div>
+            </div>
+          )}
+
+          {metric.error && (
+            <div className="p-2 bg-red-500/20 border border-red-500/30 rounded text-sm text-red-300">
+              Error: {metric.error}
+            </div>
+          )}
+        </CardContent>
+      </Card>
+    );
+  };
+
+  // Premium comparison strip
+  const PremiumComparisonStrip = ({ comparison }: { comparison: ModelComparison }) => (
+    <Card className="bg-gradient-to-r from-blue-500/10 via-purple-500/10 to-blue-500/10 backdrop-blur-xl border-white/10 border-dashed">
+      <CardContent className="p-6">
+        <div className="grid grid-cols-5 gap-6 text-center">
+          <div>
+            <div className="text-3xl font-bold text-blue-400 mb-1">{comparison.model_count}</div>
+            <div className="text-sm text-gray-400">Models</div>
+          </div>
+          <div>
+            <div className="text-3xl font-bold text-green-400 mb-1">
+              {(comparison.best_confidence * 100).toFixed(0)}%
+            </div>
+            <div className="text-sm text-gray-400">Best Score</div>
+          </div>
+          <div>
+            <div className="text-3xl font-bold text-gray-300 mb-1">
+              {comparison.avg_response_time}ms
+            </div>
+            <div className="text-sm text-gray-400">Avg Time</div>
+          </div>
+          <div>
+            <div className="text-3xl font-bold text-yellow-400 mb-1">
+              ${comparison.total_cost.toFixed(3)}
+            </div>
+            <div className="text-sm text-gray-400">Total Cost</div>
+          </div>
+          <div>
+            <div className="text-3xl font-bold text-purple-400 mb-1">
+              {(comparison.performance_spread * 100).toFixed(0)}%
+            </div>
+            <div className="text-sm text-gray-400">Spread</div>
+          </div>
+        </div>
+      </CardContent>
+    </Card>
+  );
+
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-900 via-blue-900 to-slate-900 text-white">
-      {/* Header */}
+      {/* Premium Header */}
       <div className="bg-black/20 backdrop-blur-xl border-b border-white/10 p-4">
         <div className="flex justify-between items-center max-w-7xl mx-auto">
           <div className="text-2xl font-bold bg-gradient-to-r from-blue-400 to-emerald-400 bg-clip-text text-transparent">
@@ -171,9 +384,9 @@ export default function NextAGIInterface() {
 
       <div className="max-w-7xl mx-auto p-6">
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-          {/* Left Panel - Query Interface */}
+          {/* Left Panel - Enhanced Query Interface */}
           <div className="lg:col-span-2 space-y-6">
-            {/* Query Section */}
+            {/* Premium Query Section */}
             <Card className="bg-white/5 backdrop-blur-xl border-white/10">
               <CardContent className="p-8">
                 <h2 className="text-xl font-semibold mb-6">AI Query Router</h2>
@@ -186,7 +399,7 @@ export default function NextAGIInterface() {
                     onChange={(e) => setPrompt(e.target.value)}
                   />
                   
-                  <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                  <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
                     <div>
                       <Label className="text-gray-300 mb-2 block">Priority Mode</Label>
                       <select 
@@ -202,19 +415,33 @@ export default function NextAGIInterface() {
                     </div>
                     
                     <div>
-                      <Label className="text-gray-300 mb-2 block">Judge Models</Label>
+                      <Label className="text-gray-300 mb-2 block">Max Models</Label>
                       <Input
                         className="bg-white/10 border-white/20 text-white placeholder-gray-400"
-                        placeholder="Models (comma-separated)"
-                        value={judgeModels}
-                        onChange={(e) => setJudgeModels(e.target.value)}
+                        type="number"
+                        min="1"
+                        max="5"
+                        value={maxModels}
+                        onChange={(e) => setMaxModels(e.target.value)}
+                      />
+                    </div>
+
+                    <div>
+                      <Label className="text-gray-300 mb-2 block">Budget Limit ($)</Label>
+                      <Input
+                        className="bg-white/10 border-white/20 text-white placeholder-gray-400"
+                        type="number"
+                        step="0.01"
+                        value={budgetLimit}
+                        onChange={(e) => setBudgetLimit(e.target.value)}
+                        placeholder="Optional"
                       />
                     </div>
                     
                     <div>
-                      <Label className="text-gray-300 mb-2 block">Use Ask</Label>
+                      <Label className="text-gray-300 mb-2 block">Advanced Analysis</Label>
                       <div className="flex items-center space-x-2 mt-2">
-                        <Switch checked={useAsk} onCheckedChange={setUseAsk} />
+                        <Switch checked={useAdvanced} onCheckedChange={setUseAdvanced} />
                         <span className="text-sm text-gray-300">Enhanced Mode</span>
                       </div>
                     </div>
@@ -222,7 +449,7 @@ export default function NextAGIInterface() {
 
                   <Button 
                     onClick={handleSubmit} 
-                    disabled={loading || !judgeModels.trim()}
+                    disabled={loading || !prompt.trim()}
                     className="w-full bg-gradient-to-r from-blue-500 to-blue-600 hover:from-blue-600 hover:to-blue-700 text-white font-semibold py-3 px-6 rounded-lg transition-all duration-300 transform hover:scale-[1.02]"
                   >
                     {loading ? (
@@ -231,11 +458,14 @@ export default function NextAGIInterface() {
                         Analyzing with AI Models
                       </div>
                     ) : (
-                      "Analyze with AI Models"
+                      <div className="flex items-center gap-2">
+                        <Brain className="h-4 w-4" />
+                        Analyze with AI Models
+                      </div>
                     )}
                   </Button>
 
-                  {/* Processing Animation */}
+                  {/* Premium Processing Animation */}
                   {loading && (
                     <div className="space-y-4">
                       <div className="flex items-center gap-2 text-blue-400">
@@ -244,7 +474,7 @@ export default function NextAGIInterface() {
                       </div>
                       
                       {/* Model Router Visualization */}
-                      <div className="flex justify-between p-4 bg-white/5 rounded-lg">
+                      <div className="flex justify-between p-4 bg-white/5 rounded-lg border border-white/10">
                         {['GPT-4', 'Claude', 'Gemini', 'Mistral'].map((name, idx) => (
                           <ModelNode
                             key={name}
@@ -266,12 +496,15 @@ export default function NextAGIInterface() {
               </CardContent>
             </Card>
 
-            {/* Response Section */}
+            {/* Enhanced Response Section */}
             {(result || loading) && (
               <Card className="bg-white/5 backdrop-blur-xl border-white/10">
                 <CardContent className="p-6">
                   <div className="flex justify-between items-center mb-6">
-                    <h3 className="text-lg font-semibold">AI Response</h3>
+                    <h3 className="text-lg font-semibold flex items-center gap-2">
+                      <Trophy className="h-5 w-5 text-yellow-400" />
+                      Best AI Response
+                    </h3>
                     <div className="flex items-center gap-2">
                       <span className="text-sm text-gray-300">Confidence:</span>
                       <div className="w-24 h-2 bg-white/20 rounded-full overflow-hidden">
@@ -286,40 +519,90 @@ export default function NextAGIInterface() {
 
                   <div className="space-y-4">
                     {result ? (
-                      <div className="space-y-4">
+                      <div className="space-y-6">
+                        {/* Main Answer */}
                         <div className="p-4 bg-black/20 rounded-lg border-l-4 border-blue-400">
                           <div className="prose prose-invert max-w-none">
-                            <p className="text-gray-300 mb-3">
-                              <strong>NextAGI Analysis Results:</strong>
+                            <p className="text-gray-200 leading-relaxed mb-3">
+                              {result.answer}
                             </p>
-                            <p>
-                              Based on your query "{prompt.substring(0, 50)}{prompt.length > 50 ? '...' : ''}", 
-                              I've analyzed responses from {result.ranking?.length || 4} leading AI models and applied 
-                              our advanced hallucination detection system.
-                            </p>
-                            {result.winner && (
-                              <div className="mt-4 p-3 bg-green-500/20 border border-green-500/30 rounded">
-                                <strong>Winner:</strong> {result.winner.model} 
-                                {result.winner.score && ` (Score: ${result.winner.score.toFixed(3)})`}
+                            <div className="flex items-center justify-between text-sm">
+                              <div className="flex items-center gap-4">
+                                <span className="text-gray-400">Winner: <strong className="text-yellow-400">{result.winner_model}</strong></span>
+                                <span className="text-gray-400">Total Cost: <strong className="text-green-400">${result.total_cost.toFixed(4)}</strong></span>
+                                <span className="text-gray-400">Time: <strong className="text-blue-400">{result.response_time_ms}ms</strong></span>
                               </div>
-                            )}
+                              <Button variant="outline" size="sm" className="bg-white/10 border-white/20 text-gray-300 hover:bg-white/20">
+                                <Code2 className="h-3 w-3 mr-2" />
+                                View Raw
+                              </Button>
+                            </div>
                           </div>
                         </div>
 
-                        <div className="grid grid-cols-3 gap-4">
-                          <div className="text-center p-3 bg-white/10 rounded">
-                            <div className="text-lg font-bold text-green-400">96.1%</div>
-                            <div className="text-xs text-gray-400">Accuracy</div>
-                          </div>
-                          <div className="text-center p-3 bg-white/10 rounded">
-                            <div className="text-lg font-bold text-blue-400">92.8%</div>
-                            <div className="text-xs text-gray-400">Consistency</div>
-                          </div>
-                          <div className="text-center p-3 bg-white/10 rounded">
-                            <div className="text-lg font-bold text-yellow-400">95.3%</div>
-                            <div className="text-xs text-gray-400">Reliability</div>
+                        {/* Model Comparison Strip */}
+                        {result.model_comparison && (
+                          <PremiumComparisonStrip comparison={result.model_comparison} />
+                        )}
+
+                        {/* View Controls */}
+                        <div className="flex items-center justify-between">
+                          <h3 className="text-lg font-semibold text-white">All Model Analysis</h3>
+                          <div className="flex items-center gap-2">
+                            <Button
+                              variant={viewMode === "comparison" ? "default" : "outline"}
+                              size="sm"
+                              onClick={() => setViewMode("comparison")}
+                              className={viewMode === "comparison" ? "bg-blue-600" : "bg-white/10 border-white/20 text-gray-300"}
+                            >
+                              <BarChart3 className="h-4 w-4 mr-1" />
+                              Grid View
+                            </Button>
+                            <Button
+                              variant={viewMode === "individual" ? "default" : "outline"}
+                              size="sm"
+                              onClick={() => setViewMode("individual")}
+                              className={viewMode === "individual" ? "bg-blue-600" : "bg-white/10 border-white/20 text-gray-300"}
+                            >
+                              <Eye className="h-4 w-4 mr-1" />
+                              Stack View
+                            </Button>
                           </div>
                         </div>
+
+                        {/* All Model Results */}
+                        {result.model_metrics.length > 0 && (
+                          <div className={
+                            viewMode === "comparison" 
+                              ? "grid grid-cols-1 xl:grid-cols-2 gap-4"
+                              : "space-y-4"
+                          }>
+                            {result.model_metrics.map((metric, idx) => (
+                              <PremiumModelCard
+                                key={`${metric.model}-${idx}`}
+                                metric={metric}
+                                isSelected={selectedModel === metric.model}
+                              />
+                            ))}
+                          </div>
+                        )}
+
+                        {/* Analysis Reasoning */}
+                        {result.reasoning && (
+                          <Card className="bg-white/5 backdrop-blur-xl border-white/10">
+                            <CardHeader>
+                              <CardTitle className="flex items-center gap-2 text-white">
+                                <Sparkles className="h-5 w-5 text-purple-400" />
+                                Analysis Reasoning
+                              </CardTitle>
+                            </CardHeader>
+                            <CardContent>
+                              <div className="whitespace-pre-line text-sm text-gray-300 bg-black/20 p-4 rounded-md border border-white/10">
+                                {result.reasoning}
+                              </div>
+                            </CardContent>
+                          </Card>
+                        )}
                       </div>
                     ) : (
                       <div className="p-8 text-center text-gray-400 italic">
@@ -332,7 +615,7 @@ export default function NextAGIInterface() {
             )}
           </div>
 
-          {/* Right Panel - Metrics */}
+          {/* Right Panel - Premium Metrics */}
           <div className="space-y-6">
             <MetricCard
               title="Today's Usage"
@@ -396,6 +679,22 @@ export default function NextAGIInterface() {
                 </div>
               </CardContent>
             </Card>
+
+            {/* Selected Model Details */}
+            {result && selectedModel && (
+              <Card className="bg-white/5 backdrop-blur-xl border-white/10">
+                <CardContent className="p-6">
+                  <div className="flex items-center justify-between mb-4">
+                    <h4 className="text-sm font-medium text-gray-300">Selected Model</h4>
+                    <Brain className="w-5 h-5 text-blue-400" />
+                  </div>
+                  <div className="text-center">
+                    <div className="text-lg font-bold text-white mb-2">{selectedModel.split('/').pop()}</div>
+                    <div className="text-xs text-gray-400">Click any model card to inspect details</div>
+                  </div>
+                </CardContent>
+              </Card>
+            )}
           </div>
         </div>
       </div>

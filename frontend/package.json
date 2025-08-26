@@ -9,6 +9,9 @@
     "lint": "next lint"
   },
   "dependencies": {
+    "@radix-ui/react-progress": "^1.1.7",
+    "@radix-ui/react-separator": "^1.1.7",
+    "@radix-ui/react-slot": "^1.2.3",
     "@types/recharts": "^1.8.29",
     "clsx": "^2.1.1",
     "lucide-react": "^0.453.0",
