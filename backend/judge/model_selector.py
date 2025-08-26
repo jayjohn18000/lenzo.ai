@@ -6,7 +6,7 @@ Optimizes model selection based on query type, cost, speed, and quality requirem
 
 import re
 import json
-from typing import List, Dict, Tuple, Optional
+from typing import List, Dict, Tuple, Optional, Any
 from dataclasses import dataclass
 from enum import Enum
 import numpy as np
