@@ -447,6 +447,23 @@ async def dev_query(req: dict):
             "reasoning": None
         }
 
+@app.post("/api/simple-query")
+async def simple_query_without_auth(request: dict):
+    """Simple test endpoint without authentication"""
+    try:
+        prompt = request.get("prompt", "test")
+        return {
+            "request_id": f"test_{int(time.time())}",
+            "answer": f"Backend is running! Received: {prompt}",
+            "confidence": 0.9,
+            "winner_model": "test-model",
+            "models_used": ["test-model"],
+            "response_time_ms": 100,
+            "reasoning": "Simple test response - backend is working"
+        }
+    except Exception as e:
+        return {"error": str(e)}
+
 if __name__ == "__main__":
     import uvicorn
     uvicorn.run(
