@@ -10,6 +10,7 @@ from backend.judge.schemas import RouteRequest, PipelineID
 from backend.judge.pipelines.judge import run_judge
 from backend.judge.pipelines.tool_chain import run_tool_chain
 from backend.judge.policy.dispatcher import should_escalate_after_prepass
+from backend.judge.pipelines.judge import run_judge
 
 logger = logging.getLogger(__name__)
 

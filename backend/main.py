@@ -29,6 +29,7 @@ from backend.auth.api_key import Base, verify_api_key
 from backend.api.v1.routes import router as api_router
 from backend.judge.model_selector import SmartModelSelector
 from backend.judge.steps.enhanced_scoring import EnhancedScorer
+from backend.judge.utils.cache import get_cache
 
 # Configure logging
 logging.basicConfig(
@@ -463,6 +464,19 @@ async def simple_query_without_auth(request: dict):
         }
     except Exception as e:
         return {"error": str(e)}
+
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    # Existing startup code...
+    
+    # Initialize cache
+    cache = await get_cache()
+    logger.info("Cache initialized")
+    
+    yield
+    
+    # Cleanup
+    await cache.close()
 
 if __name__ == "__main__":
     import uvicorn

@@ -47,6 +47,20 @@ class Settings(BaseSettings):
     SECRET_KEY: str = Field(default="dev-secret-key-change-in-production", env="SECRET_KEY")
     
     # ===== END ADDITIONS =====
+        # Caching
+
+    REDIS_HOST = "localhost"
+    REDIS_PORT = 6379
+    REDIS_CACHE_DB = 1
+
+    # Performance
+    ENABLE_CACHING=False
+    ENABLE_BATCH_JUDGING=False
+    MAX_BATCH_SIZE = 8
+
+    # Confidence thresholds
+    MIN_CACHE_CONFIDENCE = 0.7
+    CONF_THRESHOLD = 0.85
 
     # === Model configurations based on test results ===
     # Primary models: Fast, reliable, diverse providers

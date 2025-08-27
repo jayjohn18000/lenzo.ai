@@ -11,6 +11,7 @@ from statistics import mean
 # Import your existing pipeline components
 from backend.judge.pipelines.runner import run_pipeline
 from backend.judge.schemas import RouteRequest, RouteOptions
+from backend.judge.utils.cache import get_cache
 
 # FIXED: Define all required Pydantic models
 class QueryRequest(BaseModel):
@@ -106,6 +107,17 @@ async def query_models(request: QueryRequest):
     """
     start_time = time.time()
     request_id = str(uuid.uuid4())
+    
+    # Check cache first
+    cache = await get_cache()
+    cached_result = await cache.get(
+        request.prompt,
+        selected_models,
+        mode=request.mode
+    )
+    
+    if cached_result:
+        return QueryResponse(**cached_result)
     
     try:
         # Enhanced model selection with prompt analysis
