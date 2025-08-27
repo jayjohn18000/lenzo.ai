@@ -1,4 +1,4 @@
-# backend/api/v1/routes.py (FIXED VERSION - Complete & Working)
+# backend/api/v1/routes.py (FIXED VERSION - Variable Scope Issue Resolved)
 
 import time
 import uuid
@@ -13,7 +13,7 @@ from backend.judge.pipelines.runner import run_pipeline
 from backend.judge.schemas import RouteRequest, RouteOptions
 from backend.judge.utils.cache import get_cache
 
-# FIXED: Define all required Pydantic models
+# Define all required Pydantic models
 class QueryRequest(BaseModel):
     """Request model for query endpoint"""
     prompt: str = Field(..., min_length=1, max_length=5000)
@@ -98,7 +98,7 @@ def estimate_token_cost(model: str, tokens_in: int, tokens_out: int) -> float:
     
     return (tokens_in * costs["input"] / 1000) + (tokens_out * costs["output"] / 1000)
 
-# Main query endpoint
+# Main query endpoint - FIXED
 @router.post("/query", response_model=QueryResponse)
 async def query_models(request: QueryRequest):
     """
@@ -108,21 +108,26 @@ async def query_models(request: QueryRequest):
     start_time = time.time()
     request_id = str(uuid.uuid4())
     
-    # Check cache first
-    cache = await get_cache()
-    cached_result = await cache.get(
-        request.prompt,
-        selected_models,
-        mode=request.mode
-    )
+    # FIXED: Define selected_models BEFORE using it in cache lookup
+    selected_models = get_models_for_mode(request.mode, request.max_models, request.prompt)
     
-    if cached_result:
-        return QueryResponse(**cached_result)
+    # Check cache (now with properly defined selected_models)
+    try:
+        cache = await get_cache()
+        cached_result = await cache.get(
+            request.prompt,
+            selected_models,  # Now this variable exists!
+            mode=request.mode
+        )
+        
+        if cached_result:
+            return QueryResponse(**cached_result)
+    except Exception as cache_error:
+        # Cache failure shouldn't break the request
+        print(f"Cache error: {cache_error}")
+        pass
     
     try:
-        # Enhanced model selection with prompt analysis
-        selected_models = get_models_for_mode(request.mode, request.max_models, request.prompt)
-        
         # Build route request for your existing pipeline
         route_req = RouteRequest(
             prompt=request.prompt,
@@ -287,19 +292,19 @@ def generate_comprehensive_reasoning(
     
     reasoning = f"""Comprehensive Multi-Model Analysis for: "{prompt[:60]}..."
 
-🏆 Winner: {winner.model if winner else 'Unknown'}
+Winner: {winner.model if winner else 'Unknown'}
 • Confidence: {winner.confidence:.1%} (ranked #{winner.rank_position})
 • Response time: {winner.response_time_ms}ms
 • Reliability score: {winner.reliability_score:.2f}
 • Hallucination risk: {winner.hallucination_risk:.2f}
 
-📊 Fleet Performance Summary:
+Fleet Performance Summary:
 • Models consulted: {total_models}
 • Average confidence: {avg_confidence:.1%}
 • Average response time: {avg_response_time:.0f}ms
 • Performance spread: {max(m.confidence for m in metrics) - min(m.confidence for m in metrics):.1%}
 
-🔍 Complete Model Rankings:"""
+Complete Model Rankings:"""
     
     for metric in metrics:
         reasoning += f"\n#{metric.rank_position}. {metric.model.split('/')[-1]} - {metric.confidence:.1%} confidence ({metric.response_time_ms}ms)"

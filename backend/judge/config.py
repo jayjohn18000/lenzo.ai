@@ -1,6 +1,6 @@
 # backend/judge/config.py
 from functools import lru_cache
-from typing import Literal, List
+from typing import Literal, List, ClassVar
 import os
 
 from pydantic import Field, HttpUrl, SecretStr
@@ -23,7 +23,7 @@ class Settings(BaseSettings):
     request_timeout_seconds: float = 60.0
     MAX_PARALLEL_FANOUT: int = 5
 
-    # ===== ADD THESE MISSING PROPERTIES =====
+    # ===== FIXED: ADD TYPE ANNOTATIONS TO ALL FIELDS =====
     
     # Database configuration
     DATABASE_URL: str = Field(
@@ -31,10 +31,11 @@ class Settings(BaseSettings):
         env="DATABASE_URL"
     )
     
-    # Redis configuration
+    # Redis configuration - FIXED: Added type annotations
     REDIS_HOST: str = Field(default="localhost", env="REDIS_HOST")
-    REDIS_PORT: int = Field(default=6379, env="REDIS_PORT")
+    REDIS_PORT: int = Field(default=6379, env="REDIS_PORT") 
     REDIS_URL: str = Field(default="redis://localhost:6379/0", env="REDIS_URL")
+    REDIS_CACHE_DB: int = Field(default=1, env="REDIS_CACHE_DB")  # FIXED: Added type annotation
     
     # Debug mode
     DEBUG: bool = Field(default=True, env="DEBUG")
@@ -46,25 +47,24 @@ class Settings(BaseSettings):
     # Security
     SECRET_KEY: str = Field(default="dev-secret-key-change-in-production", env="SECRET_KEY")
     
-    # ===== END ADDITIONS =====
-        # Caching
+    # Performance - FIXED: Added type annotations
+    ENABLE_CACHING: bool = Field(default=False, env="ENABLE_CACHING")
+    ENABLE_BATCH_JUDGING: bool = Field(default=False, env="ENABLE_BATCH_JUDGING") 
+    MAX_BATCH_SIZE: int = Field(default=8, env="MAX_BATCH_SIZE")
 
-    REDIS_HOST = "localhost"
-    REDIS_PORT = 6379
-    REDIS_CACHE_DB = 1
+    # Confidence thresholds - FIXED: Added type annotations
+    MIN_CACHE_CONFIDENCE: float = Field(default=0.7, env="MIN_CACHE_CONFIDENCE")
+    CONF_THRESHOLD: float = Field(default=0.85, env="CONF_THRESHOLD")  # Single definition
 
-    # Performance
-    ENABLE_CACHING=False
-    ENABLE_BATCH_JUDGING=False
-    MAX_BATCH_SIZE = 8
+    # Model rotation settings - FIXED: Added type annotations
+    ENABLE_MODEL_ROTATION: bool = Field(default=True, env="ENABLE_MODEL_ROTATION")
+    
+    # Judge model - FIXED: Added type annotation
+    JUDGE_MODEL: str = Field(default="openai/gpt-4o-mini", env="JUDGE_MODEL")
 
-    # Confidence thresholds
-    MIN_CACHE_CONFIDENCE = 0.7
-    CONF_THRESHOLD = 0.85
-
-    # === Model configurations based on test results ===
+    # === Model configurations based on test results - FIXED: Use ClassVar ===
     # Primary models: Fast, reliable, diverse providers
-    DEFAULT_MODELS: List[str] = [
+    DEFAULT_MODELS: ClassVar[List[str]] = [
         "openai/gpt-4o-mini",           # Fastest OpenAI, cost-effective
         "google/gemini-flash-1.5",      # Second fastest overall  
         "anthropic/claude-3-haiku",     # Fast Anthropic option
@@ -73,36 +73,26 @@ class Settings(BaseSettings):
     ]
     
     # Alternative model sets for different use cases
-    SPEED_OPTIMIZED_MODELS: List[str] = [
+    SPEED_OPTIMIZED_MODELS: ClassVar[List[str]] = [
         "mistralai/mistral-small",      # 0.48s - fastest
         "google/gemini-flash-1.5",      # 0.55s - second fastest
         "openai/gpt-3.5-turbo",         # 0.62s - reliable and fast
     ]
     
-    QUALITY_OPTIMIZED_MODELS: List[str] = [
+    QUALITY_OPTIMIZED_MODELS: ClassVar[List[str]] = [
         "openai/gpt-4o",                # Premium quality
         "anthropic/claude-3.5-sonnet",  # Top Anthropic model
         "anthropic/claude-3-opus",      # Highest quality Anthropic
     ]
     
-    COST_OPTIMIZED_MODELS: List[str] = [
+    COST_OPTIMIZED_MODELS: ClassVar[List[str]] = [
         "openai/gpt-4o-mini",           # Cheapest OpenAI
         "anthropic/claude-3-haiku",     # Cheapest Anthropic
         "mistralai/mistral-small",      # Fast and cost-effective
     ]
     
-    # Judge model - use reliable, fast model for evaluation
-    JUDGE_MODEL: str = "openai/gpt-4o-mini"  # Fast and reliable for judging
-    
-    # Confidence threshold for escalation
-    CONF_THRESHOLD: float = 0.85
-
-    # === Model rotation settings ===
-    # You can enable model rotation to distribute load and avoid rate limits
-    ENABLE_MODEL_ROTATION: bool = True
-    
     # Fallback models if primary models fail
-    FALLBACK_MODELS: List[str] = [
+    FALLBACK_MODELS: ClassVar[List[str]] = [
         "openai/gpt-3.5-turbo",
         "meta-llama/llama-3-70b-instruct", 
         "mistralai/mistral-large",
@@ -117,7 +107,7 @@ class Settings(BaseSettings):
         case_sensitive=False,
     )
 
-    # Convenience: headers for OpenRouter calls
+    # Convenience: headers for OpenRouter calls - PRESERVED ✅
     def openrouter_headers(self) -> dict:
         return {
             "Authorization": f"Bearer {self.openrouter_api_key.get_secret_value()}",
@@ -125,7 +115,7 @@ class Settings(BaseSettings):
             "X-Title": "TruthRouter Local",
         }
 
-    # === Back-compat properties ===
+    # === Back-compat properties - PRESERVED ✅ ===
     @property
     def OPENROUTER_API_KEY(self) -> str:
         return self.openrouter_api_key.get_secret_value()
@@ -135,9 +125,9 @@ class Settings(BaseSettings):
         return str(self.openrouter_api_url)
 
 
-@lru_cache
+@lru_cache  # PRESERVED ✅
 def get_settings() -> Settings:
     return Settings()
 
 
-settings = get_settings()
+settings = get_settings()  # PRESERVED ✅
