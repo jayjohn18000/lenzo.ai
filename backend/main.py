@@ -30,6 +30,8 @@ from backend.api.v1.routes import router as api_router
 from backend.judge.model_selector import SmartModelSelector
 from backend.judge.steps.enhanced_scoring import EnhancedScorer
 from backend.judge.utils.cache import get_cache
+from backend.middleware.validation import DataValidationMiddleware
+from backend.api.v1.stats import stats_router
 
 # Configure logging
 logging.basicConfig(
@@ -477,6 +479,64 @@ async def lifespan(app: FastAPI):
     
     # Cleanup
     await cache.close()
+
+app.add_middleware(DataValidationMiddleware)
+app.include_router(stats_router)
+
+# Add validation middleware
+from fastapi import Request
+from fastapi.responses import JSONResponse
+import json
+
+@app.middleware("http")
+async def validate_confidence_middleware(request: Request, call_next):
+    """Middleware to validate all confidence values in responses"""
+    response = await call_next(request)
+    
+    # Only process JSON responses
+    if response.headers.get("content-type", "").startswith("application/json"):
+        # Read response body
+        body = b""
+        async for chunk in response.body_iterator:
+            body += chunk
+        
+        try:
+            # Parse and validate JSON
+            data = json.loads(body)
+            validated_data = validate_json_confidence(data)
+            
+            # Return validated response
+            return JSONResponse(
+                content=validated_data,
+                status_code=response.status_code,
+                headers=dict(response.headers)
+            )
+        except:
+            # Return original if parsing fails
+            return response
+    
+    return response
+
+def validate_json_confidence(obj):
+    """Recursively validate confidence values in JSON objects"""
+    if isinstance(obj, dict):
+        for key, value in obj.items():
+            if isinstance(value, (int, float)):
+                # Check if key contains confidence-related terms
+                if any(term in key.lower() for term in ['confidence', 'score', 'reliability']):
+                    # If value appears to be percentage (> 1), convert to decimal
+                    if 1 < value <= 100:
+                        obj[key] = value / 100
+                    # Ensure bounds [0, 1]
+                    elif value > 100:
+                        obj[key] = 1.0
+                    elif value < 0:
+                        obj[key] = 0.0
+            else:
+                obj[key] = validate_json_confidence(value)
+    elif isinstance(obj, list):
+        return [validate_json_confidence(item) for item in obj]
+    return obj
 
 if __name__ == "__main__":
     import uvicorn

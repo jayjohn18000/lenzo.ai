@@ -9,6 +9,7 @@ import re
 from typing import Dict, List, Tuple, Optional
 from dataclasses import dataclass
 from backend.judge.schemas import Candidate
+from backend.middleware.validation import ScoringValidator
 
 @dataclass
 class TrustMetrics:
@@ -111,6 +112,20 @@ class EnhancedScorer:
             hallucination_risk=hallucination_risk,
             citation_quality=citation_quality,
             confidence_score=confidence_score
+        )
+
+    def calculate_trust_metrics_validated(self, candidate, judge_scores, all_candidates):
+        """Calculate trust metrics with validation"""
+        # Get raw metrics
+        metrics = self.calculate_trust_metrics(candidate, judge_scores, all_candidates)
+        
+        # Validate all confidence/score fields
+        return TrustMetrics(
+            reliability_score=ScoringValidator.validate_confidence(metrics.reliability_score),
+            consistency_score=ScoringValidator.validate_confidence(metrics.consistency_score),
+            hallucination_risk=ScoringValidator.validate_confidence(metrics.hallucination_risk),
+            citation_quality=ScoringValidator.validate_confidence(metrics.citation_quality),
+            confidence_score=ScoringValidator.validate_confidence(metrics.confidence_score)
         )
 
     def _assess_hallucination_risk(self, text: str) -> float:
