@@ -1,3 +1,4 @@
+// frontend/app/page.tsx - ALIGNED WITH BACKEND API
 "use client";
 
 import { useState, useCallback, useEffect } from "react";
@@ -24,57 +25,22 @@ import {
   BarChart3,
   Eye,
   Sparkles,
-  Code2
+  Code2,
+  Star
 } from "lucide-react";
 
-// Enhanced interfaces matching new functionality
-interface ModelMetrics {
-  model: string;
-  response: string;
-  confidence: number;
-  response_time_ms: number;
-  tokens_used: number;
-  cost: number;
-  reliability_score: number;
-  consistency_score: number;
-  hallucination_risk: number;
-  citation_quality: number;
-  trait_scores: Record<string, number>;
-  rank_position: number;
-  is_winner: boolean;
-  error?: string;
-}
-
-interface ModelComparison {
-  best_confidence: number;
-  worst_confidence: number;
-  avg_response_time: number;
-  total_cost: number;
-  performance_spread: number;
-  model_count: number;
-}
-
-interface QueryResult {
-  request_id: string;
-  answer: string;
-  confidence: number;
-  winner_model: string;
-  response_time_ms: number;
-  models_used: string[];
-  model_metrics: ModelMetrics[];
-  model_comparison: ModelComparison;
-  reasoning?: string;
-  total_cost: number;
-  scores_by_trait?: Record<string, number>;
-}
+// ALIGNED: Import updated types
+import { QueryResponse, ModelMetrics, ModelComparison, QueryRequest, ModelSelectionMode } from "@/types/api";
 
 export default function NextAGIInterface() {
   const [prompt, setPrompt] = useState("");
-  const [mode, setMode] = useState("balanced");
+  const [mode, setMode] = useState<ModelSelectionMode>("balanced");
   const [useAdvanced, setUseAdvanced] = useState(true);
   const [maxModels, setMaxModels] = useState("4");
   const [budgetLimit, setBudgetLimit] = useState("");
-  const [result, setResult] = useState<QueryResult | null>(null);
+  
+  // ALIGNED: Use correct QueryResponse type
+  const [result, setResult] = useState<QueryResponse | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [selectedModel, setSelectedModel] = useState<string>("");
@@ -92,6 +58,7 @@ export default function NextAGIInterface() {
     "Generating final response..."
   ];
 
+  // ALIGNED: Updated to use correct API contract
   const handleSubmit = useCallback(async () => {
     if (!prompt.trim()) return;
     
@@ -116,30 +83,36 @@ export default function NextAGIInterface() {
     }
 
     try {
+      const requestBody: QueryRequest = {
+        prompt: prompt.trim(),
+        mode: mode,
+        max_models: parseInt(maxModels),
+        budget_limit: budgetLimit ? parseFloat(budgetLimit) : undefined,
+        include_reasoning: useAdvanced
+      };
+
       const response = await fetch("/api/v1/query", {
         method: "POST",
         headers: { 
-          "Content-Type": "application/json",
-          "X-API-Key": "your-api-key-here"
+          "Content-Type": "application/json"
         },
-        body: JSON.stringify({
-          prompt,
-          mode,
-          max_models: parseInt(maxModels),
-          budget_limit: budgetLimit ? parseFloat(budgetLimit) : undefined,
-        }),
+        body: JSON.stringify(requestBody),
       });
 
       if (!response.ok) {
-        throw new Error(`API Error: ${response.status}`);
+        const errorText = await response.text();
+        throw new Error(`API Error ${response.status}: ${errorText}`);
       }
 
-      const data = await response.json();
+      const data: QueryResponse = await response.json();
+      console.log("✅ Aligned API response:", data);
+      
+      // ALIGNED: Use the correct response structure
       setResult(data);
       setSelectedModel(data.winner_model || "");
       
-      // Animate confidence score
-      const targetConfidence = data.confidence ? data.confidence * 100 : 94.2;
+      // Animate confidence score using the correct field
+      const targetConfidence = data.confidence ? data.confidence * 100 : 85;
       let currentConf = 0;
       const interval = setInterval(() => {
         currentConf += 2;
@@ -151,12 +124,13 @@ export default function NextAGIInterface() {
       }, 50);
       
     } catch (err: any) {
+      console.error("❌ Request failed:", err);
       setError(err.message || "An error occurred");
     } finally {
       setLoading(false);
       setActiveModels([]);
     }
-  }, [prompt, mode, maxModels, budgetLimit]);
+  }, [prompt, mode, maxModels, budgetLimit, useAdvanced]);
 
   const MetricCard = ({ title, value, trend, icon: Icon, color }: {
     title: string;
@@ -198,7 +172,7 @@ export default function NextAGIInterface() {
     return AlertTriangle;
   };
 
-  // Premium dark-themed model card
+  // ALIGNED: Premium model card using correct ModelMetrics structure
   const PremiumModelCard = ({ metric, isSelected }: { metric: ModelMetrics; isSelected: boolean }) => {
     const ConfidenceIcon = getConfidenceIcon(metric.confidence);
     
@@ -274,7 +248,7 @@ export default function NextAGIInterface() {
             </div>
           </div>
 
-          {/* Performance Bars with Dark Theme */}
+          {/* Performance Bars */}
           <div className="space-y-3">
             <div>
               <div className="flex justify-between text-xs mb-2">
@@ -327,7 +301,7 @@ export default function NextAGIInterface() {
     );
   };
 
-  // Premium comparison strip
+  // ALIGNED: Comparison strip using correct ModelComparison structure
   const PremiumComparisonStrip = ({ comparison }: { comparison: ModelComparison }) => (
     <Card className="bg-gradient-to-r from-blue-500/10 via-purple-500/10 to-blue-500/10 backdrop-blur-xl border-white/10 border-dashed">
       <CardContent className="p-6">
@@ -370,11 +344,14 @@ export default function NextAGIInterface() {
       {/* Premium Header */}
       <div className="bg-black/20 backdrop-blur-xl border-b border-white/10 p-4">
         <div className="flex justify-between items-center max-w-7xl mx-auto">
-          <div className="text-2xl font-bold bg-gradient-to-r from-blue-400 to-emerald-400 bg-clip-text text-transparent">
-            NextAGI
+          <div className="flex items-center gap-3">
+            <Brain className="h-8 w-8 text-blue-400" />
+            <div className="text-2xl font-bold bg-gradient-to-r from-blue-400 to-emerald-400 bg-clip-text text-transparent">
+              NextAGI
+            </div>
           </div>
           <div className="flex items-center gap-4 text-sm text-gray-300">
-            <Badge className="bg-yellow-500 text-black">Enterprise</Badge>
+            <Badge className="bg-yellow-500 text-black font-medium">Enterprise</Badge>
             <span>Legal Corp Solutions</span>
             <span>•</span>
             <span>API Requests: 2,847 / 10,000</span>
@@ -389,7 +366,10 @@ export default function NextAGIInterface() {
             {/* Premium Query Section */}
             <Card className="bg-white/5 backdrop-blur-xl border-white/10">
               <CardContent className="p-8">
-                <h2 className="text-xl font-semibold mb-6">AI Query Router</h2>
+                <h2 className="text-xl font-semibold mb-6 flex items-center gap-2">
+                  <Sparkles className="h-5 w-5 text-blue-400" />
+                  AI Query Router
+                </h2>
                 
                 <div className="space-y-4">
                   <Textarea
@@ -405,7 +385,7 @@ export default function NextAGIInterface() {
                       <select 
                         className="w-full p-2 bg-white/10 border border-white/20 rounded text-white"
                         value={mode}
-                        onChange={(e) => setMode(e.target.value)}
+                        onChange={(e) => setMode(e.target.value as ModelSelectionMode)}
                       >
                         <option value="balanced">Balanced (Quality + Speed)</option>
                         <option value="quality">Maximum Quality</option>
@@ -454,7 +434,7 @@ export default function NextAGIInterface() {
                   >
                     {loading ? (
                       <div className="flex items-center gap-2">
-                        <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+                        <Activity className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
                         Analyzing with AI Models
                       </div>
                     ) : (
@@ -469,7 +449,7 @@ export default function NextAGIInterface() {
                   {loading && (
                     <div className="space-y-4">
                       <div className="flex items-center gap-2 text-blue-400">
-                        <div className="w-4 h-4 border-2 border-blue-400/30 border-t-blue-400 rounded-full animate-spin" />
+                        <Activity className="w-4 h-4 border-2 border-blue-400/30 border-t-blue-400 rounded-full animate-spin" />
                         <span className="text-sm">{processingStep}</span>
                       </div>
                       
@@ -489,7 +469,11 @@ export default function NextAGIInterface() {
 
                   {error && (
                     <div className="p-4 bg-red-500/20 border border-red-500/30 rounded-lg text-red-200">
-                      {error}
+                      <div className="flex items-center gap-2">
+                        <AlertTriangle className="h-5 w-5" />
+                        <span className="font-medium">Error:</span>
+                        <span>{error}</span>
+                      </div>
                     </div>
                   )}
                 </div>
@@ -570,7 +554,7 @@ export default function NextAGIInterface() {
                           </div>
                         </div>
 
-                        {/* All Model Results */}
+                        {/* All Model Results - ALIGNED to use model_metrics */}
                         {result.model_metrics.length > 0 && (
                           <div className={
                             viewMode === "comparison" 
@@ -686,7 +670,7 @@ export default function NextAGIInterface() {
                 <CardContent className="p-6">
                   <div className="flex items-center justify-between mb-4">
                     <h4 className="text-sm font-medium text-gray-300">Selected Model</h4>
-                    <Brain className="w-5 h-5 text-blue-400" />
+                    <Star className="w-5 h-5 text-yellow-400" />
                   </div>
                   <div className="text-center">
                     <div className="text-lg font-bold text-white mb-2">{selectedModel.split('/').pop()}</div>

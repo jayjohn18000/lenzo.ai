@@ -1,4 +1,4 @@
-# backend/main_enhanced.py
+# backend/main.py
 """
 Enhanced main application that integrates all NextAGI components:
 - Smart model selection

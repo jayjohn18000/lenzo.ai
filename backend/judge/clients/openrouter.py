@@ -53,28 +53,35 @@ async def _post_chat(body: Dict[str, Any]) -> Dict[str, Any]:
             raise OpenRouterError(f"Request error: {e}")
 
 
+# --- change signature
 async def llm_complete(
     *,
     model: str,
     prompt: str,
     system: str | None = None,
+    temperature: float | None = None,
+    max_tokens: int | None = None,
+    top_p: float | None = None,
 ) -> Tuple[str, Dict[str, Any]]:
-    """
-    Send a simple user-only (or system+user) chat to a specific model.
-    Returns: (text, meta) where meta includes token usage if available.
-    """
+
     messages = []
     if system:
         messages.append({"role": "system", "content": system})
     messages.append({"role": "user", "content": prompt})
-    
-    body = {
+
+    # sensible defaults if None
+    temp = 0.1 if temperature is None else float(temperature)
+    max_toks = 2048 if max_tokens is None else int(max_tokens)
+
+    body: Dict[str, Any] = {
         "model": model,
         "messages": messages,
-        "max_tokens": 2048,
-        "temperature": 0.1,
+        "temperature": temp,
+        "max_tokens": max_toks,
     }
-    
+    if top_p is not None:
+        body["top_p"] = float(top_p)
+
     try:
         response_data = await _post_chat(body)
         
