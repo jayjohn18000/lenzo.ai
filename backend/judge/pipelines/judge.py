@@ -97,6 +97,7 @@ async def run_judge(req: RouteRequest, trace_id: str) -> Dict[str, Any]:
         
         result = {
             "answer": winner.text,
+            "candidates": candidates,
             "winner_model": winner.model,
             "confidence": confidence,
             "scores_by_trait": scores_by_trait,

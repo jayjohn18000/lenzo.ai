@@ -1,0 +1,44 @@
+{
+  "info": {
+    "name": "Local MVP Smoke - Frontend & FastAPI",
+    "_postman_id": "5c2c7e2b-6c7d-4c9a-9f00-111122223333",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "item": [
+    {
+      "name": "Frontend Root",
+      "request": {
+        "method": "GET",
+        "url": "http://localhost:3000/"
+      }
+    },
+    {
+      "name": "Frontend Health",
+      "request": {
+        "method": "GET",
+        "url": "http://localhost:3000/health"
+      }
+    },
+    {
+      "name": "Backend Root",
+      "request": {
+        "method": "GET",
+        "url": "http://127.0.0.1:8000/"
+      }
+    },
+    {
+      "name": "Backend Health",
+      "request": {
+        "method": "GET",
+        "url": "http://127.0.0.1:8000/health"
+      }
+    },
+    {
+      "name": "Backend OpenAPI",
+      "request": {
+        "method": "GET",
+        "url": "http://127.0.0.1:8000/openapi.json"
+      }
+    }
+  ]
+}

@@ -1,0 +1,431 @@
+{
+  "meta": {
+    "frontend_base": "http://localhost:3000",
+    "backend_base": "http://127.0.0.1:8000"
+  },
+  "checks": {
+    "frontend_common": [
+      {
+        "url": "http://localhost:3000/",
+        "ok": true,
+        "status": 200,
+        "latency_ms": 5171.73,
+        "headers": {
+          "Vary": "rsc, next-router-state-tree, next-router-prefetch, next-router-segment-prefetch, Accept-Encoding",
+          "link": "</_next/static/media/569ce4b8f30dc480-s.p.woff2>; rel=preload; as=\"font\"; crossorigin=\"\"; type=\"font/woff2\", </_next/static/media/93f479601ee12b01-s.p.woff2>; rel=preload; as=\"font\"; crossorigin=\"\"; type=\"font/woff2\"",
+          "Cache-Control": "no-store, must-revalidate",
+          "X-Powered-By": "Next.js",
+          "Content-Type": "text/html; charset=utf-8",
+          "Content-Encoding": "gzip",
+          "Date": "Mon, 01 Sep 2025 17:09:56 GMT",
+          "Connection": "keep-alive",
+          "Keep-Alive": "timeout=5",
+          "Transfer-Encoding": "chunked"
+        },
+        "text_sample": "<!DOCTYPE html><html lang=\"en\"><head><meta charSet=\"utf-8\"/><meta name=\"viewport\" content=\"width=device-width, initial-scale=1\"/><link rel=\"stylesheet\" href=\"/_next/static/css/app/layout.css?v=1756746596591\" data-precedence=\"next_static/css/app/layout.css\"/><link rel=\"preload\" as=\"script\" fetchPriority=\"low\" href=\"/_next/static/chunks/webpack.js?v=1756746596591\"/><script src=\"/_next/static/chunks/main-app.js?v=1756746596591\" async=\"\"></script><script src=\"/_next/static/chunks/app-pages-internals"
+      },
+      {
+        "url": "http://localhost:3000/health",
+        "ok": false,
+        "status": 404,
+        "latency_ms": 942.11,
+        "headers": {
+          "Cache-Control": "no-store, must-revalidate",
+          "Vary": "rsc, next-router-state-tree, next-router-prefetch, next-router-segment-prefetch, Accept-Encoding",
+          "link": "</_next/static/media/569ce4b8f30dc480-s.p.woff2>; rel=preload; as=\"font\"; crossorigin=\"\"; type=\"font/woff2\", </_next/static/media/93f479601ee12b01-s.p.woff2>; rel=preload; as=\"font\"; crossorigin=\"\"; type=\"font/woff2\"",
+          "X-Powered-By": "Next.js",
+          "Content-Type": "text/html; charset=utf-8",
+          "Content-Encoding": "gzip",
+          "Date": "Mon, 01 Sep 2025 17:09:57 GMT",
+          "Connection": "keep-alive",
+          "Keep-Alive": "timeout=5",
+          "Transfer-Encoding": "chunked"
+        },
+        "text_sample": "<!DOCTYPE html><html lang=\"en\"><head><meta charSet=\"utf-8\"/><meta name=\"viewport\" content=\"width=device-width, initial-scale=1\"/><link rel=\"stylesheet\" href=\"/_next/static/css/app/layout.css?v=1756746597720\" data-precedence=\"next_static/css/app/layout.css\"/><link rel=\"preload\" as=\"script\" fetchPriority=\"low\" href=\"/_next/static/chunks/webpack.js?v=1756746597720\"/><script src=\"/_next/static/chunks/main-app.js?v=1756746597720\" async=\"\"></script><script src=\"/_next/static/chunks/app-pages-internals"
+      },
+      {
+        "url": "http://localhost:3000/api/health",
+        "ok": false,
+        "status": 404,
+        "latency_ms": 25.0,
+        "headers": {
+          "date": "Mon, 01 Sep 2025 17:09:57 GMT",
+          "server": "uvicorn",
+          "content-length": "22",
+          "content-type": "application/json",
+          "connection": "close",
+          "Vary": "Accept-Encoding"
+        },
+        "text_sample": "{\"detail\":\"Not Found\"}"
+      },
+      {
+        "url": "http://localhost:3000/login",
+        "ok": false,
+        "status": 404,
+        "latency_ms": 50.28,
+        "headers": {
+          "Cache-Control": "no-store, must-revalidate",
+          "Vary": "rsc, next-router-state-tree, next-router-prefetch, next-router-segment-prefetch, Accept-Encoding",
+          "link": "</_next/static/media/569ce4b8f30dc480-s.p.woff2>; rel=preload; as=\"font\"; crossorigin=\"\"; type=\"font/woff2\", </_next/static/media/93f479601ee12b01-s.p.woff2>; rel=preload; as=\"font\"; crossorigin=\"\"; type=\"font/woff2\"",
+          "X-Powered-By": "Next.js",
+          "Content-Type": "text/html; charset=utf-8",
+          "Content-Encoding": "gzip",
+          "Date": "Mon, 01 Sep 2025 17:09:57 GMT",
+          "Connection": "keep-alive",
+          "Keep-Alive": "timeout=5",
+          "Transfer-Encoding": "chunked"
+        },
+        "text_sample": "<!DOCTYPE html><html lang=\"en\"><head><meta charSet=\"utf-8\"/><meta name=\"viewport\" content=\"width=device-width, initial-scale=1\"/><link rel=\"stylesheet\" href=\"/_next/static/css/app/layout.css?v=1756746597883\" data-precedence=\"next_static/css/app/layout.css\"/><link rel=\"preload\" as=\"script\" fetchPriority=\"low\" href=\"/_next/static/chunks/webpack.js?v=1756746597883\"/><script src=\"/_next/static/chunks/main-app.js?v=1756746597883\" async=\"\"></script><script src=\"/_next/static/chunks/app-pages-internals"
+      },
+      {
+        "url": "http://localhost:3000/dashboard",
+        "ok": true,
+        "status": 200,
+        "latency_ms": 1200.84,
+        "headers": {
+          "Vary": "rsc, next-router-state-tree, next-router-prefetch, next-router-segment-prefetch, Accept-Encoding",
+          "link": "</_next/static/media/569ce4b8f30dc480-s.p.woff2>; rel=preload; as=\"font\"; crossorigin=\"\"; type=\"font/woff2\", </_next/static/media/93f479601ee12b01-s.p.woff2>; rel=preload; as=\"font\"; crossorigin=\"\"; type=\"font/woff2\"",
+          "Cache-Control": "no-store, must-revalidate",
+          "X-Powered-By": "Next.js",
+          "Content-Type": "text/html; charset=utf-8",
+          "Content-Encoding": "gzip",
+          "Date": "Mon, 01 Sep 2025 17:09:59 GMT",
+          "Connection": "keep-alive",
+          "Keep-Alive": "timeout=5",
+          "Transfer-Encoding": "chunked"
+        },
+        "text_sample": "<!DOCTYPE html><html lang=\"en\"><head><meta charSet=\"utf-8\"/><meta name=\"viewport\" content=\"width=device-width, initial-scale=1\"/><link rel=\"stylesheet\" href=\"/_next/static/css/app/layout.css?v=1756746598998\" data-precedence=\"next_static/css/app/layout.css\"/><link rel=\"preload\" as=\"script\" fetchPriority=\"low\" href=\"/_next/static/chunks/webpack.js?v=1756746598998\"/><script src=\"/_next/static/chunks/main-app.js?v=1756746598998\" async=\"\"></script><script src=\"/_next/static/chunks/app-pages-internals"
+      },
+      {
+        "url": "http://localhost:3000/status",
+        "ok": false,
+        "status": 404,
+        "latency_ms": 54.08,
+        "headers": {
+          "Cache-Control": "no-store, must-revalidate",
+          "Vary": "rsc, next-router-state-tree, next-router-prefetch, next-router-segment-prefetch, Accept-Encoding",
+          "link": "</_next/static/media/569ce4b8f30dc480-s.p.woff2>; rel=preload; as=\"font\"; crossorigin=\"\"; type=\"font/woff2\", </_next/static/media/93f479601ee12b01-s.p.woff2>; rel=preload; as=\"font\"; crossorigin=\"\"; type=\"font/woff2\"",
+          "X-Powered-By": "Next.js",
+          "Content-Type": "text/html; charset=utf-8",
+          "Content-Encoding": "gzip",
+          "Date": "Mon, 01 Sep 2025 17:09:59 GMT",
+          "Connection": "keep-alive",
+          "Keep-Alive": "timeout=5",
+          "Transfer-Encoding": "chunked"
+        },
+        "text_sample": "<!DOCTYPE html><html lang=\"en\"><head><meta charSet=\"utf-8\"/><meta name=\"viewport\" content=\"width=device-width, initial-scale=1\"/><link rel=\"stylesheet\" href=\"/_next/static/css/app/layout.css?v=1756746599142\" data-precedence=\"next_static/css/app/layout.css\"/><link rel=\"preload\" as=\"script\" fetchPriority=\"low\" href=\"/_next/static/chunks/webpack.js?v=1756746599142\"/><script src=\"/_next/static/chunks/main-app.js?v=1756746599142\" async=\"\"></script><script src=\"/_next/static/chunks/app-pages-internals"
+      }
+    ],
+    "backend_common": [
+      {
+        "url": "http://127.0.0.1:8000/",
+        "ok": true,
+        "status": 200,
+        "latency_ms": 3.89,
+        "headers": {
+          "date": "Mon, 01 Sep 2025 17:09:58 GMT",
+          "server": "uvicorn",
+          "content-length": "149",
+          "content-type": "application/json"
+        },
+        "text_sample": "{\"message\":\"Welcome to NextAGI - Advanced Multi-LLM Truth Router\",\"version\":\"2.0.0\",\"docs_url\":\"/docs\",\"health_check\":\"/health\",\"api_base\":\"/api/v1\"}"
+      },
+      {
+        "url": "http://127.0.0.1:8000/health",
+        "ok": true,
+        "status": 200,
+        "latency_ms": 5.35,
+        "headers": {
+          "date": "Mon, 01 Sep 2025 17:09:59 GMT",
+          "server": "uvicorn",
+          "content-length": "63",
+          "content-type": "application/json"
+        },
+        "text_sample": "{\"status\":\"healthy\",\"available_models\":5,\"last_test_time\":null}"
+      },
+      {
+        "url": "http://127.0.0.1:8000/api/health",
+        "ok": false,
+        "status": 404,
+        "latency_ms": 3.74,
+        "headers": {
+          "date": "Mon, 01 Sep 2025 17:09:59 GMT",
+          "server": "uvicorn",
+          "content-length": "22",
+          "content-type": "application/json"
+        },
+        "text_sample": "{\"detail\":\"Not Found\"}"
+      },
+      {
+        "url": "http://127.0.0.1:8000/docs",
+        "ok": true,
+        "status": 200,
+        "latency_ms": 2.89,
+        "headers": {
+          "date": "Mon, 01 Sep 2025 17:09:59 GMT",
+          "server": "uvicorn",
+          "content-length": "965",
+          "content-type": "text/html; charset=utf-8"
+        },
+        "text_sample": "\n    <!DOCTYPE html>\n    <html>\n    <head>\n    <link type=\"text/css\" rel=\"stylesheet\" href=\"https://cdn.jsdelivr.net/npm/swagger-ui-dist@5/swagger-ui.css\">\n    <link rel=\"shortcut icon\" href=\"https://fastapi.tiangolo.com/img/favicon.png\">\n    <title>NextAGI - Advanced Multi-LLM Truth Router - Swagger UI</title>\n    </head>\n    <body>\n    <div id=\"swagger-ui\">\n    </div>\n    <script src=\"https://cdn.jsdelivr.net/npm/swagger-ui-dist@5/swagger-ui-bundle.js\"></script>\n    <!-- `SwaggerUIBundle` is n"
+      },
+      {
+        "url": "http://127.0.0.1:8000/redoc",
+        "ok": true,
+        "status": 200,
+        "latency_ms": 2.49,
+        "headers": {
+          "date": "Mon, 01 Sep 2025 17:09:59 GMT",
+          "server": "uvicorn",
+          "content-length": "922",
+          "content-type": "text/html; charset=utf-8"
+        },
+        "text_sample": "\n    <!DOCTYPE html>\n    <html>\n    <head>\n    <title>NextAGI - Advanced Multi-LLM Truth Router - ReDoc</title>\n    <!-- needed for adaptive design -->\n    <meta charset=\"utf-8\"/>\n    <meta name=\"viewport\" content=\"width=device-width, initial-scale=1\">\n    \n    <link href=\"https://fonts.googleapis.com/css?family=Montserrat:300,400,700|Roboto:300,400,700\" rel=\"stylesheet\">\n    \n    <link rel=\"shortcut icon\" href=\"https://fastapi.tiangolo.com/img/favicon.png\">\n    <!--\n    ReDoc doesn't change out"
+      },
+      {
+        "url": "http://127.0.0.1:8000/openapi.json",
+        "ok": true,
+        "status": 200,
+        "latency_ms": 6.38,
+        "headers": {
+          "date": "Mon, 01 Sep 2025 17:09:59 GMT",
+          "server": "uvicorn",
+          "content-length": "19935",
+          "content-type": "application/json"
+        },
+        "text_sample": "{\"openapi\":\"3.1.0\",\"info\":{\"title\":\"NextAGI - Advanced Multi-LLM Truth Router\",\"description\":\"\\n    NextAGI routes your queries to multiple leading AI models, evaluates their responses \\n    using advanced scoring algorithms, and returns the most accurate, trustworthy answer.\\n    \\n    Features:\\n    - Smart model selection based on query type\\n    - Enhanced confidence scoring with hallucination detection\\n    - Comprehensive usage tracking and billing\\n    - Enterprise-grade API with rate lim"
+      }
+    ],
+    "backend_openapi_meta": {
+      "url": "http://127.0.0.1:8000/openapi.json",
+      "ok": true,
+      "status": 200,
+      "latency_ms": 5.99,
+      "headers": {
+        "date": "Mon, 01 Sep 2025 17:09:59 GMT",
+        "server": "uvicorn",
+        "content-length": "19935",
+        "content-type": "application/json"
+      },
+      "text_sample": "{\"openapi\":\"3.1.0\",\"info\":{\"title\":\"NextAGI - Advanced Multi-LLM Truth Router\",\"description\":\"\\n    NextAGI routes your queries to multiple leading AI models, evaluates their responses \\n    using advanced scoring algorithms, and returns the most accurate, trustworthy answer.\\n    \\n    Features:\\n    - Smart model selection based on query type\\n    - Enhanced confidence scoring with hallucination detection\\n    - Comprehensive usage tracking and billing\\n    - Enterprise-grade API with rate lim"
+    },
+    "backend_endpoints_discovered": [
+      {
+        "method": "POST",
+        "path": "/api/v1/query"
+      },
+      {
+        "method": "GET",
+        "path": "/api/v1/health"
+      },
+      {
+        "method": "GET",
+        "path": "/api/v1/usage"
+      },
+      {
+        "method": "GET",
+        "path": "/health"
+      },
+      {
+        "method": "POST",
+        "path": "/route"
+      },
+      {
+        "method": "GET",
+        "path": "/admin/stats"
+      },
+      {
+        "method": "POST",
+        "path": "/dev/route"
+      },
+      {
+        "method": "GET",
+        "path": "/dev/health"
+      },
+      {
+        "method": "GET",
+        "path": "/debug/routes"
+      },
+      {
+        "method": "GET",
+        "path": "/test/ping"
+      },
+      {
+        "method": "GET",
+        "path": "/"
+      },
+      {
+        "method": "POST",
+        "path": "/dev/query"
+      },
+      {
+        "method": "POST",
+        "path": "/api/simple-query"
+      },
+      {
+        "method": "GET",
+        "path": "/api/v1/usage/today"
+      },
+      {
+        "method": "GET",
+        "path": "/api/v1/models/performance"
+      }
+    ],
+    "backend_openapi_probing": [
+      {
+        "url": "http://127.0.0.1:8000/api/v1/query",
+        "method": "POST",
+        "skipped": true,
+        "reason": "Non-GET or unsafe to call without schema-aware payload"
+      },
+      {
+        "url": "http://127.0.0.1:8000/api/v1/health",
+        "ok": true,
+        "status": 200,
+        "latency_ms": 3.12,
+        "headers": {
+          "date": "Mon, 01 Sep 2025 17:09:59 GMT",
+          "server": "uvicorn",
+          "content-length": "80",
+          "content-type": "application/json"
+        },
+        "text_sample": "{\"status\":\"healthy\",\"timestamp\":1756746599.2176251,\"version\":\"2.0.0-simplified\"}"
+      },
+      {
+        "url": "http://127.0.0.1:8000/api/v1/usage",
+        "ok": false,
+        "status": null,
+        "latency_ms": 5.35,
+        "error": "('Connection broken: IncompleteRead(0 bytes read, 413 more expected)', IncompleteRead(0 bytes read, 413 more expected))"
+      },
+      {
+        "url": "http://127.0.0.1:8000/health",
+        "ok": true,
+        "status": 200,
+        "latency_ms": 4.55,
+        "headers": {
+          "date": "Mon, 01 Sep 2025 17:09:59 GMT",
+          "server": "uvicorn",
+          "content-length": "63",
+          "content-type": "application/json"
+        },
+        "text_sample": "{\"status\":\"healthy\",\"available_models\":5,\"last_test_time\":null}"
+      },
+      {
+        "url": "http://127.0.0.1:8000/route",
+        "method": "POST",
+        "skipped": true,
+        "reason": "Non-GET or unsafe to call without schema-aware payload"
+      },
+      {
+        "url": "http://127.0.0.1:8000/admin/stats",
+        "ok": false,
+        "status": 403,
+        "latency_ms": 2.86,
+        "headers": {
+          "date": "Mon, 01 Sep 2025 17:09:59 GMT",
+          "server": "uvicorn",
+          "content-length": "77",
+          "content-type": "application/json"
+        },
+        "text_sample": "{\"error\":\"Not authenticated\",\"status_code\":403,\"timestamp\":1756746599.230604}"
+      },
+      {
+        "url": "http://127.0.0.1:8000/dev/route",
+        "method": "POST",
+        "skipped": true,
+        "reason": "Non-GET or unsafe to call without schema-aware payload"
+      },
+      {
+        "url": "http://127.0.0.1:8000/dev/health",
+        "ok": true,
+        "status": 200,
+        "latency_ms": 2.94,
+        "headers": {
+          "date": "Mon, 01 Sep 2025 17:09:59 GMT",
+          "server": "uvicorn",
+          "content-length": "83",
+          "content-type": "application/json"
+        },
+        "text_sample": "{\"status\":\"ok\",\"mode\":\"development\",\"message\":\"NextAGI development server running\"}"
+      },
+      {
+        "url": "http://127.0.0.1:8000/debug/routes",
+        "ok": true,
+        "status": 200,
+        "latency_ms": 3.3,
+        "headers": {
+          "date": "Mon, 01 Sep 2025 17:09:59 GMT",
+          "server": "uvicorn",
+          "content-length": "1375",
+          "content-type": "application/json"
+        },
+        "text_sample": "{\"available_routes\":[{\"path\":\"/openapi.json\",\"methods\":[\"HEAD\",\"GET\"],\"name\":\"openapi\"},{\"path\":\"/docs\",\"methods\":[\"HEAD\",\"GET\"],\"name\":\"swagger_ui_html\"},{\"path\":\"/docs/oauth2-redirect\",\"methods\":[\"HEAD\",\"GET\"],\"name\":\"swagger_ui_redirect\"},{\"path\":\"/redoc\",\"methods\":[\"HEAD\",\"GET\"],\"name\":\"redoc_html\"},{\"path\":\"/api/v1/query\",\"methods\":[\"POST\"],\"name\":\"query_models\"},{\"path\":\"/api/v1/health\",\"methods\":[\"GET\"],\"name\":\"health_check\"},{\"path\":\"/api/v1/usage\",\"methods\":[\"GET\"],\"name\":\"get_usage_sta"
+      },
+      {
+        "url": "http://127.0.0.1:8000/test/ping",
+        "ok": true,
+        "status": 200,
+        "latency_ms": 3.26,
+        "headers": {
+          "date": "Mon, 01 Sep 2025 17:09:59 GMT",
+          "server": "uvicorn",
+          "content-length": "47",
+          "content-type": "application/json"
+        },
+        "text_sample": "{\"message\":\"pong\",\"timestamp\":1756746599.24017}"
+      },
+      {
+        "url": "http://127.0.0.1:8000/",
+        "ok": true,
+        "status": 200,
+        "latency_ms": 4.38,
+        "headers": {
+          "date": "Mon, 01 Sep 2025 17:09:59 GMT",
+          "server": "uvicorn",
+          "content-length": "149",
+          "content-type": "application/json"
+        },
+        "text_sample": "{\"message\":\"Welcome to NextAGI - Advanced Multi-LLM Truth Router\",\"version\":\"2.0.0\",\"docs_url\":\"/docs\",\"health_check\":\"/health\",\"api_base\":\"/api/v1\"}"
+      },
+      {
+        "url": "http://127.0.0.1:8000/dev/query",
+        "method": "POST",
+        "skipped": true,
+        "reason": "Non-GET or unsafe to call without schema-aware payload"
+      },
+      {
+        "url": "http://127.0.0.1:8000/api/simple-query",
+        "method": "POST",
+        "skipped": true,
+        "reason": "Non-GET or unsafe to call without schema-aware payload"
+      },
+      {
+        "url": "http://127.0.0.1:8000/api/v1/usage/today",
+        "ok": true,
+        "status": 200,
+        "latency_ms": 6.3,
+        "headers": {
+          "date": "Mon, 01 Sep 2025 17:09:59 GMT",
+          "server": "uvicorn",
+          "content-length": "66",
+          "content-type": "application/json"
+        },
+        "text_sample": "{\"requests\":0,\"cost\":0.0,\"avg_confidence\":0.0,\"date\":\"2025-09-01\"}"
+      },
+      {
+        "url": "http://127.0.0.1:8000/api/v1/models/performance",
+        "ok": true,
+        "status": 200,
+        "latency_ms": 7.12,
+        "headers": {
+          "date": "Mon, 01 Sep 2025 17:09:59 GMT",
+          "server": "uvicorn",
+          "content-length": "86",
+          "content-type": "application/json"
+        },
+        "text_sample": "{\"models\":[],\"period_days\":7,\"last_updated\":\"2025-09-01T17:09:59.257710\",\"error\":null}"
+      }
+    ]
+  }
+}

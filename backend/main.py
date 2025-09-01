@@ -33,6 +33,7 @@ from backend.judge.utils.cache import get_cache
 from backend.middleware.validation import DataValidationMiddleware
 from backend.api.v1.stats import stats_router
 
+
 # Configure logging
 logging.basicConfig(
     level=getattr(logging, settings.log_level),

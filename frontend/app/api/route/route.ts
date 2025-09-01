@@ -16,7 +16,7 @@ export async function POST(req: Request) {
   try {
     // Create AbortController for timeout handling
     const controller = new AbortController();
-    const timeoutId = setTimeout(() => controller.abort(), 90000); // 30 second timeout
+    const timeoutId = setTimeout(() => controller.abort(), 90000); // 90 second timeout
     
     const r = await fetch(`${backend}/api/v1/query`, {
       method: "POST",
