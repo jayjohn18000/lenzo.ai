@@ -6,8 +6,12 @@ export async function POST(req: Request) {
   // Transform the request to match your enhanced API
   const transformedBody = {
     prompt: body.prompt || "Test question",
-    mode: body.mode || "balanced",
-    max_models: body.max_models || 3
+    category: body.category || "general",  // Add this
+    expected_traits: ["accurate", "clear"], // Add this
+    options: {
+      rubric: {},
+      require_citations: false
+    }
   };
   
   console.log('🔗 Calling: http://127.0.0.1:8000/api/v1/query');

@@ -38,11 +38,19 @@ class DataValidationMiddleware(BaseHTTPMiddleware):
             # Validate and fix the data
             validated_data = self.validate_response_data(data)
             
+            # Log size change for debugging
+            original_size = len(response_body)
+            validated_json = json.dumps(validated_data)
+            new_size = len(validated_json.encode())
+            if original_size != new_size:
+                logger.debug(f"Response size changed: {original_size} -> {new_size} bytes")
+            
             # Create new response with validated data
+            # Let JSONResponse calculate the correct Content-Length
             return JSONResponse(
                 content=validated_data,
                 status_code=response.status_code,
-                headers=dict(response.headers),
+                # REMOVED: headers=dict(response.headers),  # This was causing the issue
                 media_type="application/json"
             )
         except json.JSONDecodeError:
