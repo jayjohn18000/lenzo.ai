@@ -18,6 +18,12 @@ from fastapi.responses import JSONResponse
 import redis
 from sqlalchemy import create_engine, text
 from sqlalchemy.orm import sessionmaker
+import asyncio
+import redis.asyncio as redis  # Change from regular redis
+from backend.dependencies import init_dependencies
+from backend.jobs.manager import JobManager
+from backend.jobs.models import Base as JobBase
+from backend.jobs.worker import QueryWorker
 
 # Import all the enhanced components
 from backend.judge.schemas import RouteRequest, RouteResponse, HealthResponse
@@ -49,25 +55,13 @@ redis_client = None
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     """Startup and shutdown events"""
+    global redis_client, worker_task
+    worker_task = None
+    
     # Startup
     logger.info("🚀 Starting NextAGI...")
     
-    # Initialize Redis connection
-    global redis_client
-    try:
-        redis_client = redis.Redis(
-            host=settings.REDIS_HOST if hasattr(settings, 'REDIS_HOST') else 'localhost',
-            port=settings.REDIS_PORT if hasattr(settings, 'REDIS_PORT') else 6379,
-            db=0,
-            decode_responses=True
-        )
-        redis_client.ping()
-        logger.info("✅ Redis connection established")
-    except Exception as e:
-        logger.warning(f"⚠️  Redis connection failed: {e}")
-        redis_client = None
-    
-    # Initialize database
+    # 1. Initialize database FIRST (required for job tables)
     try:
         engine = create_engine(settings.DATABASE_URL)
         Base.metadata.create_all(bind=engine)
@@ -76,7 +70,44 @@ async def lifespan(app: FastAPI):
         logger.error(f"❌ Database connection failed: {e}")
         raise
     
-    # Validate API keys
+    # 2. Initialize Redis (async)
+    try:
+        redis_client = redis.Redis(
+            host=getattr(settings, 'REDIS_HOST', 'localhost'),
+            port=getattr(settings, 'REDIS_PORT', 6379),
+            db=0,
+            decode_responses=False  # Important: False for job queue binary data
+        )
+        await redis_client.ping()  # Await for async Redis
+        logger.info("✅ Redis connection established")
+        
+        # 3. Initialize job system (only if Redis is available)
+        try:
+            # Initialize dependencies
+            job_manager = init_dependencies(redis_client, settings.DATABASE_URL)
+            
+            # Create job tables
+            from backend.jobs.models import Base as JobBase
+            JobBase.metadata.create_all(bind=engine)
+            logger.info("✅ Job tables created")
+            
+            # Start worker if configured
+            if getattr(settings, 'RUN_WORKER_IN_PROCESS', True):
+                from backend.jobs.worker import QueryWorker
+                worker = QueryWorker(job_manager)
+                worker_task = asyncio.create_task(worker.start())
+                logger.info("✅ Background worker started")
+                
+        except Exception as e:
+            logger.error(f"❌ Job system initialization failed: {e}")
+            # Continue without job system
+            
+    except Exception as e:
+        logger.warning(f"⚠️  Redis connection failed: {e}")
+        logger.warning("⚠️  Running without async job support")
+        redis_client = None
+    
+    # 4. Validate API keys
     api_key_checks = [
         ("OPENROUTER_API_KEY", settings.OPENROUTER_API_KEY),
         ("ANTHROPIC_API_KEY", getattr(settings, 'ANTHROPIC_API_KEY', None)),
@@ -95,8 +126,22 @@ async def lifespan(app: FastAPI):
     
     # Shutdown
     logger.info("🛑 Shutting down NextAGI...")
+    
+    # Stop worker first
+    if worker_task:
+        logger.info("Stopping background worker...")
+        worker_task.cancel()
+        try:
+            await worker_task
+        except asyncio.CancelledError:
+            pass
+        logger.info("✅ Worker stopped")
+    
+    # Close Redis connection
     if redis_client:
-        redis_client.close()
+        await redis_client.close()  # Await for async Redis
+        logger.info("✅ Redis connection closed")
+    
     logger.info("👋 NextAGI shutdown completed")
 
 # Create FastAPI app with enhanced configuration

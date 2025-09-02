@@ -1,10 +1,10 @@
-# backend/api/v1/routes.py - SIMPLIFIED WORKING VERSION (No DB Dependencies)
+# backend/api/v1/routes.py 
 
 import time
 import uuid
 import random
 from typing import Dict, Optional, Any, List
-from fastapi import APIRouter, HTTPException, Depends, Query, WebSocket, WebSocketDisconnect
+from fastapi import APIRouter, HTTPException, Depends, Query, BackgroundTasks, WebSocket, WebSocketDisconnect
 from fastapi.responses import JSONResponse, Response
 from pydantic import BaseModel, Field
 from statistics import mean
@@ -13,6 +13,10 @@ import logging
 import random
 
 # Import your existing pipeline components
+import asyncio
+from backend.jobs.manager import JobManager
+from backend.jobs.models import JobStatus
+from backend.dependencies import get_job_manager
 from datetime import datetime, timedelta
 from backend.judge.pipelines.runner import run_pipeline
 from backend.judge.schemas import RouteRequest, RouteOptions
@@ -155,6 +159,24 @@ def calculate_model_confidence(candidate, judge_scores: Optional[Dict[str, float
         base_confidence = min(1.0, base_confidence + 0.05)
     
     return validate_confidence(base_confidence)
+
+def estimate_query_time(request: QueryRequest) -> float:
+    """Estimate query processing time in milliseconds"""
+    base_time = 800
+    model_times = {
+        "speed": 400,
+        "balanced": 800,
+        "quality": 1500,
+        "cost": 600
+    }
+    time_per_model = model_times.get(request.mode, 800)
+    total_time = base_time + (time_per_model * request.max_models)
+    
+    # Add complexity factor
+    complexity_factor = min(len(request.prompt) / 100, 3.0)
+    total_time *= (1 + complexity_factor * 0.2)
+    
+    return total_time
 
 # SIMPLIFIED: Main query endpoint without database dependencies
 @router.post("/query", response_model=QueryResponse)
@@ -575,6 +597,86 @@ async def usage_simple():
         ],
         "status": "success"
     }
+
+
+@router.post("/query-async")
+async def create_query(
+    request: QueryRequest,
+    background_tasks: BackgroundTasks,
+    fast: bool = Query(False, description="Execute synchronously if possible"),
+    job_manager: JobManager = Depends(get_job_manager)
+):
+    """
+    Enhanced query endpoint with async job support
+    """
+    # Estimate processing time
+    estimated_time = estimate_query_time(request)
+    
+    # Fast path: Execute synchronously if requested and possible
+    if fast and estimated_time < 3000:  # Less than 3 seconds
+        try:
+            result = await asyncio.wait_for(
+                run_pipeline(request),
+                timeout=3.0
+            )
+            return result
+        except asyncio.TimeoutError:
+            # Fall through to async path
+            pass
+    
+    # Async path: Create job and return 202
+    job_id = await job_manager.create_job(request.model_dump())
+    
+    return JSONResponse(
+        status_code=202,
+        content={
+            "job_id": job_id,
+            "status": "accepted",
+            "estimated_time_ms": estimated_time,
+            "poll_url": f"/api/v1/jobs/{job_id}",
+            "poll_interval_ms": 500
+        }
+    )
+
+@router.get("/jobs/{job_id}")
+async def get_job_status(
+    job_id: str,
+    job_manager: JobManager = Depends(get_job_manager)
+):
+    """Get job status and results"""
+    status = await job_manager.get_job_status(job_id)
+    
+    if not status:
+        raise HTTPException(status_code=404, detail="Job not found")
+    
+    # Return appropriate status code based on job state
+    if status["status"] == JobStatus.COMPLETED:
+        return {
+            "job_id": job_id,
+            "status": "completed",
+            "result": status["result"],
+            "processing_time_ms": status.get("actual_time_ms")
+        }
+    elif status["status"] == JobStatus.FAILED:
+        return JSONResponse(
+            status_code=500,
+            content={
+                "job_id": job_id,
+                "status": "failed",
+                "error": status["error"]
+            }
+        )
+    else:
+        # Still processing
+        return JSONResponse(
+            status_code=202,
+            content={
+                "job_id": job_id,
+                "status": status["status"],
+                "progress": status["progress"],
+                "message": "Job is still processing"
+            }
+        )
     
     # Let Response handle everything automatically
     return Response(

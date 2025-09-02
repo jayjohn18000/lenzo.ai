@@ -115,6 +115,48 @@ export class APIClient {
   async getDetailedHealth(): Promise<any> {
     return this.safeRequest('/api/v1/health');
   }
+
+    async queryWithPolling(request: QueryRequest): Promise<QueryResponse> {
+    // Try fast path first
+    const fastResponse = await this.safeRequest('/api/v1/query?fast=true', undefined, {
+      method: 'POST',
+      body: JSON.stringify(request),
+    });
+    
+    // Check if we got a direct response or job
+    if (fastResponse.job_id) {
+      // Poll for results
+      return this.pollJob(fastResponse.job_id, fastResponse.poll_interval_ms || 500);
+    }
+    
+    return fastResponse;
+  }
+  
+  private async pollJob(jobId: string, intervalMs: number): Promise<QueryResponse> {
+    const maxAttempts = 60; // 30 seconds with 500ms intervals
+    let attempts = 0;
+    
+    while (attempts < maxAttempts) {
+      const status = await this.safeRequest(`/api/v1/jobs/${jobId}`);
+      
+      if (status.status === 'completed') {
+        return status.result;
+      } else if (status.status === 'failed') {
+        throw new Error(status.error || 'Job failed');
+      }
+      
+      // Update UI with progress
+      if (this.onProgress) {
+        this.onProgress(status.progress || 0);
+      }
+      
+      await new Promise(resolve => setTimeout(resolve, intervalMs));
+      attempts++;
+    }
+    
+    throw new Error('Job timeout');
+  }
+}
 }
 
 // Export the singleton instance
