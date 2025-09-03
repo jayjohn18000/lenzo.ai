@@ -1,24 +1,38 @@
-// hooks/use-api.ts - Updated React hooks
-import { useState, useEffect, useCallback } from 'react';
-import { apiClient } from '@/lib/api';
+// frontend/hooks/use-query.ts
+import { useState, useCallback } from 'react';
+import { apiClient, type QueryRequest } from '@/lib/api/client';
+import type { QueryResponse, AsyncJobResponse } from '@/lib/api/schemas';
 
-export function useQuery() {
+interface UseQueryResult {
+  executeQuery: (request: QueryRequest) => Promise<QueryResponse>;
+  result: QueryResponse | null;
+  loading: boolean;
+  progress: AsyncJobResponse | null;
+  error: string | null;
+  reset: () => void;
+}
+
+export function useQuery(): UseQueryResult {
+  const [result, setResult] = useState<QueryResponse | null>(null);
   const [loading, setLoading] = useState(false);
+  const [progress, setProgress] = useState<AsyncJobResponse | null>(null);
   const [error, setError] = useState<string | null>(null);
-  const [result, setResult] = useState<any>(null);
 
-  const executeQuery = useCallback(async (request: {
-    prompt: string;
-    judge_models: string[];
-    use_ask: boolean;
-  }) => {
+  const executeQuery = useCallback(async (request: QueryRequest) => {
     setLoading(true);
     setError(null);
-    
+    setProgress(null);
+    setResult(null);
+
     try {
-      // Use your existing route endpoint
-      const response = await apiClient.query(request);
+      const response = await apiClient.query(request, {
+        onProgress: (status) => {
+          setProgress(status);
+        },
+      });
+
       setResult(response);
+      setProgress(null);
       return response;
     } catch (err) {
       const errorMessage = err instanceof Error ? err.message : 'Query failed';
@@ -29,18 +43,26 @@ export function useQuery() {
     }
   }, []);
 
+  const reset = useCallback(() => {
+    setResult(null);
+    setLoading(false);
+    setProgress(null);
+    setError(null);
+  }, []);
+
   return {
     executeQuery,
-    loading,
-    error,
     result,
-    resetError: () => setError(null),
-    resetResult: () => setResult(null)
+    loading,
+    progress,
+    error,
+    reset,
   };
 }
 
+// Hook for usage statistics with proper validation
 export function useUsageStats(days: number = 30) {
-  const [stats, setStats] = useState<any>(null);
+  const [stats, setStats] = useState<UsageStats | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
@@ -48,32 +70,23 @@ export function useUsageStats(days: number = 30) {
     try {
       setLoading(true);
       setError(null);
+      
       const data = await apiClient.getUsageStats(days);
       setStats(data);
     } catch (err) {
-      console.warn('Usage stats not available, using fallback data');
-      // Provide fallback data when endpoint is not ready
+      console.error('Failed to fetch usage stats:', err);
+      setError(err instanceof Error ? err.message : 'Failed to load statistics');
+      
+      // Use fallback data if API is unavailable
       setStats({
-        total_requests: 2847,
-        total_tokens: 1200000,
-        total_cost: 247,
-        avg_response_time: 1.8,
-        avg_confidence: 0.942,
-        top_models: [
-          { name: 'GPT-4 Turbo', usage_percentage: 42, avg_score: 0.95 },
-          { name: 'Claude-3.5 Sonnet', usage_percentage: 31, avg_score: 0.92 },
-          { name: 'Gemini Pro', usage_percentage: 18, avg_score: 0.88 },
-          { name: 'Others', usage_percentage: 9, avg_score: 0.85 }
-        ],
-        daily_usage: [
-          { date: '2024-01-01', requests: 1200, cost: 45 },
-          { date: '2024-01-02', requests: 1850, cost: 52 },
-          { date: '2024-01-03', requests: 2100, cost: 38 },
-          { date: '2024-01-04', requests: 1900, cost: 41 },
-          { date: '2024-01-05', requests: 2400, cost: 35 },
-          { date: '2024-01-06', requests: 2200, cost: 28 },
-          { date: '2024-01-07', requests: 2847, cost: 32 }
-        ]
+        total_requests: 0,
+        total_tokens: 0,
+        total_cost: 0,
+        avg_response_time: 0,
+        avg_confidence: 0,
+        top_models: [],
+        daily_usage: [],
+        data_available: false,
       });
     } finally {
       setLoading(false);
@@ -87,38 +100,28 @@ export function useUsageStats(days: number = 30) {
   return { stats, loading, error, refetch: fetchStats };
 }
 
-export function useModels() {
-  const [models, setModels] = useState<any>(null);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
+// Hook for health check with auto-retry
+export function useHealthCheck(intervalMs: number = 30000) {
+  const [isHealthy, setIsHealthy] = useState<boolean | null>(null);
+  const [lastChecked, setLastChecked] = useState<Date | null>(null);
 
-  useEffect(() => {
-    const fetchModels = async () => {
-      try {
-        const data = await apiClient.getModels();
-        setModels(data);
-      } catch (err) {
-        console.warn('Models endpoint not available, using fallback data');
-        setModels({
-          available_models: {
-            "openai/gpt-4": { cost_per_1k_tokens: 0.03, quality_score: 0.95 },
-            "anthropic/claude-3-5-sonnet": { cost_per_1k_tokens: 0.015, quality_score: 0.92 },
-            "google/gemini-pro": { cost_per_1k_tokens: 0.001, quality_score: 0.88 }
-          },
-          subscription_tier: "enterprise",
-          tier_limits: {
-            max_models_per_query: 8,
-            batch_processing: true,
-            parallel_processing: true
-          }
-        });
-      } finally {
-        setLoading(false);
-      }
-    };
-
-    fetchModels();
+  const checkHealth = useCallback(async () => {
+    try {
+      const healthy = await apiClient.healthCheck();
+      setIsHealthy(healthy);
+      setLastChecked(new Date());
+    } catch {
+      setIsHealthy(false);
+      setLastChecked(new Date());
+    }
   }, []);
 
-  return { models, loading, error };
+  useEffect(() => {
+    checkHealth();
+    
+    const interval = setInterval(checkHealth, intervalMs);
+    return () => clearInterval(interval);
+  }, [checkHealth, intervalMs]);
+
+  return { isHealthy, lastChecked, checkHealth };
 }
