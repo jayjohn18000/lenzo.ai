@@ -2,6 +2,7 @@
 // A comprehensive system for auditing data validation issues in your application
 
 import { z } from 'zod';
+import React from 'react';
 
 // ============================================
 // 1. RUNTIME DATA LOGGER
@@ -63,9 +64,8 @@ class DataAuditor {
       } catch (error) {
         if (error instanceof z.ZodError) {
           log.validation.passed = false;
-          log.validation.errors = error.errors.map(e => 
-            `${e.path.join('.')}: ${e.message}`
-          );
+          log.validation = log.validation ?? {};
+          log.validation.errors = error.issues.map(i => i.message);
         }
       }
     }
@@ -283,8 +283,8 @@ export function createAPIValidator(auditor: DataAuditor) {
       } catch (error) {
         if (error instanceof z.ZodError) {
           return {
-            error: `Validation failed: ${error.errors.map(e => e.message).join(', ')}`,
-            rawData: error.input
+            error: `Validation failed: ${error.issues.map(i => i.message).join(', ')}`,
+            rawData: undefined
           };
         }
         return { error: `Failed to parse response: ${error}` };
@@ -357,13 +357,12 @@ export async function fetchWithValidation<T>(
   return apiValidator.validateResponse(response, schema, url);
 }
 
-// Example: Component with validation
 export function ValidatedComponent<P>(
   Component: React.ComponentType<P>,
-  schema?: z.ZodSchema<P>
+  validate: (props: unknown) => P
 ) {
-  return (props: P) => {
-    const validatedProps = propValidator(Component.name, props, schema);
+  return (props: unknown) => {
+    const validatedProps = validate(props);
     return <Component {...validatedProps} />;
   };
 }

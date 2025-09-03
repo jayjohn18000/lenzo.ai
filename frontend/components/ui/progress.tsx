@@ -1,5 +1,6 @@
 // components/ui/progress.tsx
 "use client";
+import { safeToFixed } from '@/lib/safe-formatters';
 import React from "react";
 import { cn } from "@/lib/utils";
 
@@ -40,7 +41,7 @@ export function Progress({
       />
       {showValue && (
         <div className="absolute inset-0 flex items-center justify-center text-xs font-semibold text-white">
-          {percentage.toFixed(1)}%
+          {safeToFixed(percentage, 1)}%
         </div>
       )}
     </div>

@@ -8,7 +8,8 @@ import {
     type AsyncJobResponse,
     type UsageStats
   } from './schemas';
-  
+import { z } from 'zod';  
+
   export interface QueryRequest {
     prompt: string;
     mode?: 'fast' | 'balanced' | 'thorough';

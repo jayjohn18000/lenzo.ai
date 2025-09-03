@@ -1,20 +1,18 @@
 // frontend/app/page.tsx - ALIGNED WITH BACKEND API
 "use client";
 
-import { useState, useCallback, useEffect } from "react";
+import { safeToFixed, safeCurrency, safePercentage } from '@/lib/safe-formatters';
+import { useState, useCallback } from "react";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
 import { Switch } from "@/components/ui/switch";
-import { Progress } from "@/components/ui/progress";
 import { Badge } from "@/components/ui/badge";
 import { 
   Activity, 
   Brain, 
-  TrendingUp, 
-  Zap, 
   Shield,
   Clock,
   DollarSign,
@@ -156,7 +154,7 @@ export default function NextAGIInterface() {
       active ? 'bg-blue-500 text-white' : 'bg-white/10 text-gray-300'
     }`}>
       <div className="text-xs font-semibold mb-1">{name}</div>
-      <div className="text-sm font-bold">{score ? score.toFixed(1) : '--'}</div>
+      <div className="text-sm font-bold">{score ? safePercentage(score) : '--'}</div>
     </div>
   );
 
@@ -195,7 +193,7 @@ export default function NextAGIInterface() {
             <div className="flex items-center gap-2">
               <ConfidenceIcon className={`h-4 w-4 ${getConfidenceColor(metric.confidence).split(' ')[0]}`} />
               <Badge className={`${getConfidenceColor(metric.confidence)} border-0`}>
-                {(metric.confidence * 100).toFixed(1)}%
+                {safePercentage(metric.confidence)}%
               </Badge>
             </div>
           </div>
@@ -228,7 +226,7 @@ export default function NextAGIInterface() {
                 <DollarSign className="h-3 w-3 text-gray-400" />
                 <span className="text-gray-400">Cost</span>
               </div>
-              <span className="font-semibold text-white">${metric.cost.toFixed(4)}</span>
+              <span className="font-semibold text-white">{safeCurrency(metric.cost)}</span>
             </div>
             
             <div className="space-y-1">
@@ -236,7 +234,7 @@ export default function NextAGIInterface() {
                 <Shield className="h-3 w-3 text-gray-400" />
                 <span className="text-gray-400">Reliability</span>
               </div>
-              <span className="font-semibold text-green-400">{(metric.reliability_score * 100).toFixed(0)}%</span>
+              <span className="font-semibold text-green-400">{safeToFixed(metric.reliability_score * 100, 0)}%</span>
             </div>
             
             <div className="space-y-1">
@@ -244,7 +242,7 @@ export default function NextAGIInterface() {
                 <AlertTriangle className="h-3 w-3 text-gray-400" />
                 <span className="text-gray-400">Risk</span>
               </div>
-              <span className="font-semibold text-red-400">{(metric.hallucination_risk * 100).toFixed(0)}%</span>
+              <span className="font-semibold text-red-400">{safeToFixed(metric.hallucination_risk * 100, 0)}%</span>
             </div>
           </div>
 
@@ -253,7 +251,7 @@ export default function NextAGIInterface() {
             <div>
               <div className="flex justify-between text-xs mb-2">
                 <span className="text-gray-400">Consistency</span>
-                <span className="text-white">{(metric.consistency_score * 100).toFixed(0)}%</span>
+                <span className="text-white">{safeToFixed(metric.consistency_score * 100, 0)}%</span>
               </div>
               <div className="w-full bg-white/20 rounded-full h-2">
                 <div 
@@ -266,7 +264,7 @@ export default function NextAGIInterface() {
             <div>
               <div className="flex justify-between text-xs mb-2">
                 <span className="text-gray-400">Citation Quality</span>
-                <span className="text-white">{(metric.citation_quality * 100).toFixed(0)}%</span>
+                <span className="text-white">{safeToFixed(metric.citation_quality * 100, 0)}%</span>
               </div>
               <div className="w-full bg-white/20 rounded-full h-2">
                 <div 
@@ -284,7 +282,7 @@ export default function NextAGIInterface() {
               <div className="flex flex-wrap gap-1">
                 {Object.entries(metric.trait_scores).map(([trait, score]) => (
                   <Badge key={trait} className="bg-white/10 text-gray-300 border-white/20 text-xs">
-                    {trait}: {(score * 100).toFixed(0)}%
+                    {trait}: {safePercentage(score)}%
                   </Badge>
                 ))}
               </div>
@@ -312,7 +310,7 @@ export default function NextAGIInterface() {
           </div>
           <div>
             <div className="text-3xl font-bold text-green-400 mb-1">
-              {(comparison.best_confidence * 100).toFixed(0)}%
+              {safeToFixed(comparison.best_confidence * 100, 0)}%
             </div>
             <div className="text-sm text-gray-400">Best Score</div>
           </div>
@@ -324,13 +322,13 @@ export default function NextAGIInterface() {
           </div>
           <div>
             <div className="text-3xl font-bold text-yellow-400 mb-1">
-              ${comparison.total_cost.toFixed(3)}
+              {safeToFixed(comparison.total_cost, 3)}
             </div>
             <div className="text-sm text-gray-400">Total Cost</div>
           </div>
           <div>
             <div className="text-3xl font-bold text-purple-400 mb-1">
-              {(comparison.performance_spread * 100).toFixed(0)}%
+              {safeToFixed(comparison.performance_spread * 100, 0)}%
             </div>
             <div className="text-sm text-gray-400">Spread</div>
           </div>
@@ -497,7 +495,7 @@ export default function NextAGIInterface() {
                           style={{ width: `${confidence}%` }}
                         />
                       </div>
-                      <span className="text-sm font-semibold">{confidence.toFixed(1)}%</span>
+                      <span className="text-sm font-semibold">{safePercentage(confidence)}%</span>
                     </div>
                   </div>
 
@@ -513,7 +511,7 @@ export default function NextAGIInterface() {
                             <div className="flex items-center justify-between text-sm">
                               <div className="flex items-center gap-4">
                                 <span className="text-gray-400">Winner: <strong className="text-yellow-400">{result.winner_model}</strong></span>
-                                <span className="text-gray-400">Total Cost: <strong className="text-green-400">${result.total_cost != null ? Number(result.total_cost).toFixed(4) : '0.0000'}</strong></span>
+                                <span className="text-gray-400">Total Cost: <strong className="text-green-400">${result.total_cost != null ? safeToFixed(result.total_cost, 4) : '0.0000'}</strong></span>
                                 <span className="text-gray-400">Time: <strong className="text-blue-400">{result.response_time_ms}ms</strong></span>
                               </div>
                               <Button variant="outline" size="sm" className="bg-white/10 border-white/20 text-gray-300 hover:bg-white/20">

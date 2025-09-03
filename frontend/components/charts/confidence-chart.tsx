@@ -1,5 +1,6 @@
 // components/charts/confidence-chart.tsx
 "use client";
+import { safePercentage } from '@/lib/safe-formatters';
 import { PieChart, Pie, Cell, ResponsiveContainer } from 'recharts';
 
 interface ConfidenceChartProps {
@@ -55,7 +56,7 @@ export function ConfidenceChart({
       </ResponsiveContainer>
       <div className="absolute inset-0 flex items-center justify-center">
         <div className="text-center">
-          <div className="text-2xl font-bold text-white">{confidence.toFixed(1)}%</div>
+          <div className="text-2xl font-bold text-white">{safePercentage(confidence)}%</div>
           <div className="text-xs text-gray-400">Confidence</div>
         </div>
       </div>

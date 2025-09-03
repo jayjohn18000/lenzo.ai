@@ -19,6 +19,7 @@ export interface JobResponse {
 // Fallback data for when backend is not ready
 const FALLBACK_DATA = {
   usage: {
+    data_available: true,
     total_requests: 2847,
     total_tokens: 1200000,
     total_cost: 247,
@@ -37,6 +38,9 @@ const FALLBACK_DATA = {
     }))
   },
   models: {
+    available_models: [],                
+    subscription_tier: 'free',            
+    tier_limits: {},
     modes: {
       speed: {
         models: ["openai/gpt-4o-mini", "anthropic/claude-3-haiku", "google/gemini-flash-1.5"],

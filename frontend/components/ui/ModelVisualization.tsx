@@ -1,6 +1,7 @@
 // components/ui/model-visualization.tsx
 "use client";
 import { cn } from '@/lib/utils';
+import { safeToFixed } from '@/lib/safe-formatters';
 
 interface ModelVisualizationProps {
   models: string[];
@@ -17,7 +18,8 @@ export function ModelVisualization({
     <div className={cn("grid grid-cols-2 md:grid-cols-4 gap-4 p-6 bg-white/5 backdrop-blur-xl border border-white/10 rounded-xl", className)}>
       {models.map((model) => {
         const isActive = activeModels.includes(model);
-        const score = isActive ? (Math.random() * 15 + 85).toFixed(1) : '--';
+        const raw = Math.random() * 15 + 85;
+        const score = isActive ? safeToFixed(raw, 1) : '--';
         
         return (
           <div

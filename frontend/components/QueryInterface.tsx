@@ -1,10 +1,11 @@
+import { safePercentage } from '@/lib/safe-formatters';
+
 // Modern, intuitive query interface
 import { useState, useCallback } from 'react'
 import { Button } from '@/components/ui/button'
 import { Textarea } from '@/components/ui/textarea'
 import { Badge } from '@/components/ui/badge'
 import { Card } from '@/components/ui/card'
-import { Progress } from '@/components/ui/progress'
 
 interface QueryResult {
   answer: string;
@@ -75,7 +76,7 @@ export default function QueryInterface() {
             <div className="flex items-center justify-between">
               <h3 className="text-lg font-semibold">Best Answer</h3>
               <Badge variant="secondary">
-                Confidence: {(result.confidence * 100).toFixed(1)}%
+                Confidence: {safePercentage(result.confidence)}%
               </Badge>
             </div>
             

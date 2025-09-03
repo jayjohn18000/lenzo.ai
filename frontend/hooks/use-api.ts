@@ -1,5 +1,6 @@
 // frontend/hooks/use-query.ts
-import { useState, useCallback } from 'react';
+import { useState, useEffect, useCallback } from 'react';
+import type { UsageStats } from '@/types/api'; 
 import { apiClient, type QueryRequest } from '@/lib/api/client';
 import type { QueryResponse, AsyncJobResponse } from '@/lib/api/schemas';
 

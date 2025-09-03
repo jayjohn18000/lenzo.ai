@@ -1,6 +1,7 @@
 // frontend/app/dashboard/page.tsx - ALIGNED WITH BACKEND API
 "use client";
 
+import { safeToFixed, safePercentage, safeTime } from '@/lib/safe-formatters';
 import { useState, useCallback, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
@@ -19,7 +20,6 @@ import {
   Clock,
   DollarSign,
   BarChart3,
-  Users,
   Code2,
   FileText,
   Target,
@@ -52,8 +52,8 @@ export default function Dashboard() {
 
   // ALIGNED: Helper functions for data formatting
   const formatNumber = (num: number): string => {
-    if (num >= 1_000_000) return `${(num / 1_000_000).toFixed(1)}M`;
-    if (num >= 1_000) return `${(num / 1_000).toFixed(1)}K`;
+    if (num >= 1_000_000) return `${safeToFixed(num / 1_000_000, 1)}M`;
+    if (num >= 1_000) return `${safeToFixed(num / 1_000, 1)}K`;
     return num.toString();
   };
 
@@ -67,11 +67,11 @@ export default function Dashboard() {
 
   const formatPercentage01 = (value01: number): string => {
     const bounded = Math.max(0, Math.min(1, value01));
-    return `${(bounded * 100).toFixed(1)}%`;
+    return `${safeToFixed(bounded * 100, 1)}%`;
   };
 
   const formatTimeMs = (ms: number): string => {
-    if (ms >= 1000) return `${(ms / 1000).toFixed(1)}s`;
+    if (ms >= 1000) return `${safeTime(ms / 1000)}s`;
     return `${Math.round(ms)}ms`;
   };
 
@@ -265,7 +265,7 @@ export default function Dashboard() {
                 <div>
                   <p className="text-sm text-gray-600">Avg Response Time</p>
                   <p className="text-2xl font-bold">
-                    {statsLoading ? "—" : usageStats?.data_available ? `${usageStats.avg_response_time.toFixed(1)}s` : "—"}
+                    {statsLoading ? '—' : usageStats?.data_available ? safeTime(usageStats.avg_response_time * 1000) : '—'}
                   </p>
                 </div>
                 <Clock className="h-8 w-8 text-orange-500" />
@@ -599,7 +599,7 @@ export default function Dashboard() {
                   <div key={i} className="flex items-center justify-between">
                     <div className="flex items-center gap-3">
                       <span className="font-medium">{model.name}</span>
-                      <span className="text-sm text-gray-500">{model.usage_percentage.toFixed(1)}% usage</span>
+                      <span className="text-sm text-gray-500">{safePercentage(model.usage_percentage, { expectsFraction: false, digits: 1 })} usage</span>
                     </div>
                     <div className="flex items-center gap-2">
                       <div className="w-20 h-2 bg-gray-200 rounded-full overflow-hidden">

@@ -33,7 +33,7 @@ export const QueryResponseSchema = z.object({
   total_cost: NumericField.optional(),
   estimated_cost: NumericField.optional(),
   model_metrics: z.array(ModelMetricsSchema).optional(),
-  trust_metrics: z.record(NumericField).optional(),
+  trust_metrics: z.record(z.string(), NumericField).optional(),
   citations: z.array(z.any()).optional(),
 });
 

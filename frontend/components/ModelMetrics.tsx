@@ -58,7 +58,7 @@ export function ModelMetricsCard({ metrics, loading, winner }: ModelMetricsCardP
                   )}
                 </div>
                 <span className="text-sm text-muted-foreground">
-                  {safeCurrency(metric.cost, 4)}
+                  {safeCurrency(metric.cost, { maximumFractionDigits: 4 })}
                 </span>
               </div>
 
@@ -75,7 +75,7 @@ export function ModelMetricsCard({ metrics, loading, winner }: ModelMetricsCardP
                   <div className="flex justify-between mb-1">
                     <span className="text-muted-foreground">Response Time</span>
                     <span className="font-medium">
-                      {safeTime(metric.response_time_ms, 'ms', 0)}
+                      {safeTime(metric.response_time_ms, { unit: 'auto', decimals: 0 })}
                     </span>
                   </div>
                 </div>
@@ -121,7 +121,7 @@ function MetricBadge({ label, value, format = 'percentage', inverse }: MetricBad
   
   const variant = getVariant(displayValue, inverse);
   const formatted = format === 'percentage' 
-    ? safePercentage(displayValue, 0) 
+    ? safePercentage(displayValue, { digits: 0 }) 
     : safeToFixed(displayValue, 2);
 
   return (

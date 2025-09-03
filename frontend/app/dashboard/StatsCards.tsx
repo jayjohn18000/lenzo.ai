@@ -1,7 +1,7 @@
 // frontend/app/dashboard/components/StatsCards.tsx
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { TrendingUp, Clock, DollarSign, Brain } from "lucide-react";
-import { safeToFixed, safeCurrency, safePercentage, safeTime } from "@/lib/safe-formatters";
+import { safeCurrency, safePercentage, safeTime } from "@/lib/safe-formatters";
 import type { UsageStats } from "@/lib/api/schemas";
 
 interface StatsCardsProps {
@@ -36,7 +36,7 @@ export function StatsCards({ stats, loading }: StatsCardsProps) {
         </CardHeader>
         <CardContent>
           <div className="text-2xl font-bold">
-            {safeTime(stats.avg_response_time * 1000, 's', 1)}
+            {safeTime(stats.avg_response_time * 1000)}
           </div>
           <p className="text-xs text-muted-foreground">
             {safePercentage(-0.08)} improvement
@@ -51,10 +51,10 @@ export function StatsCards({ stats, loading }: StatsCardsProps) {
         </CardHeader>
         <CardContent>
           <div className="text-2xl font-bold">
-            {safeCurrency(stats.total_cost, 2)}
+            {safeCurrency(stats.total_cost, { maximumFractionDigits: 2 })}
           </div>
           <p className="text-xs text-muted-foreground">
-            {safeCurrency(stats.total_cost / stats.total_requests, 3)} per query
+            {safeCurrency(stats.total_cost / stats.total_requests, { maximumFractionDigits: 3 })} per query
           </p>
         </CardContent>
       </Card>
