@@ -51,14 +51,16 @@ def _calculate_final_confidence(
     all_scores: Dict[int, Dict[str, float]]
 ) -> float:
     """
-    Calculate final confidence based on multiple factors
+    Calculate final confidence based on multiple factors.
+    FIXED: Prioritize judge consensus score rather than diluting with other factors.
     """
-    confidence_factors = []
+    # Start with the consensus score as the primary confidence
+    base_confidence = consensus_score
     
-    # Base consensus score
-    confidence_factors.append(consensus_score)
+    # Apply modifiers instead of averaging everything equally
+    confidence_modifiers = []
     
-    # Winner margin (how much better than second place)
+    # 1. Winner margin modifier (±10% max)
     if len(all_candidates) > 1:
         all_averages = []
         for idx, scores in all_scores.items():
@@ -69,32 +71,38 @@ def _calculate_final_confidence(
         if len(all_averages) >= 2:
             all_averages.sort(reverse=True)
             margin = all_averages[0] - all_averages[1]
-            margin_confidence = min(1.0, margin * 2)  # Scale margin to confidence
-            confidence_factors.append(margin_confidence)
+            # If winner has significant margin, boost confidence slightly
+            # If very close race, reduce confidence slightly
+            if margin > 0.2:
+                confidence_modifiers.append(0.1)  # +10% for clear winner
+            elif margin < 0.05:
+                confidence_modifiers.append(-0.1)  # -10% for very close race
     
-    # Response quality indicators
+    # 2. Response quality modifier (±5% max)
     if winner.text:
-        # Length quality
         text_length = len(winner.text)
-        if 50 <= text_length <= 1000:
-            length_confidence = 0.8
+        if 100 <= text_length <= 2000:
+            confidence_modifiers.append(0.05)  # Good length
         elif text_length < 50:
-            length_confidence = 0.4
-        else:
-            length_confidence = 0.6
-        confidence_factors.append(length_confidence)
-        
-        # Heuristic score if available
-        if winner.heuristic_score is not None:
-            confidence_factors.append(winner.heuristic_score)
+            confidence_modifiers.append(-0.1)  # Too short
+        elif text_length > 5000:
+            confidence_modifiers.append(-0.05)  # Too verbose
     
-    # Model reliability factor
+    # 3. Model reliability modifier (±5% max)
     model_reliability = _get_model_reliability(winner.model)
-    confidence_factors.append(model_reliability)
+    if model_reliability >= 0.9:
+        confidence_modifiers.append(0.05)  # Premium model bonus
+    elif model_reliability < 0.8:
+        confidence_modifiers.append(-0.05)  # Lower tier model penalty
     
-    # Calculate weighted average
-    final_confidence = mean(confidence_factors) if confidence_factors else 0.5
+    # Apply modifiers to base confidence
+    modifier_sum = sum(confidence_modifiers)
+    final_confidence = base_confidence + modifier_sum
     
+    # Log the calculation for debugging
+    logger.debug(f"Confidence calculation: base={base_confidence:.3f}, modifiers={modifier_sum:.3f}, final={final_confidence:.3f}")
+    
+    # Ensure bounds [0.0, 1.0]
     return max(0.0, min(1.0, final_confidence))
 
 def _get_model_reliability(model_name: str) -> float:

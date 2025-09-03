@@ -513,7 +513,7 @@ export default function NextAGIInterface() {
                             <div className="flex items-center justify-between text-sm">
                               <div className="flex items-center gap-4">
                                 <span className="text-gray-400">Winner: <strong className="text-yellow-400">{result.winner_model}</strong></span>
-                                <span className="text-gray-400">Total Cost: <strong className="text-green-400">${result.total_cost.toFixed(4)}</strong></span>
+                                <span className="text-gray-400">Total Cost: <strong className="text-green-400">${result.total_cost != null ? Number(result.total_cost).toFixed(4) : '0.0000'}</strong></span>
                                 <span className="text-gray-400">Time: <strong className="text-blue-400">{result.response_time_ms}ms</strong></span>
                               </div>
                               <Button variant="outline" size="sm" className="bg-white/10 border-white/20 text-gray-300 hover:bg-white/20">

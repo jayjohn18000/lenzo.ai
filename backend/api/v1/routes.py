@@ -10,7 +10,6 @@ from pydantic import BaseModel, Field
 from statistics import mean
 import json
 import logging
-import random
 
 # Import your existing pipeline components
 import asyncio
@@ -105,9 +104,6 @@ class QueryResponse(BaseModel):
     # Legacy compatibility
     estimated_cost: float = 0.0
 
-# Router setup
-router = APIRouter(prefix="/api/v1", tags=["NextAGI Core"])
-
 def validate_confidence(value: float, source: str = "") -> float:
     """Ensure confidence is within [0, 1] bounds"""
     return max(0.0, min(1.0, value))
@@ -178,135 +174,214 @@ def estimate_query_time(request: QueryRequest) -> float:
     
     return total_time
 
-# SIMPLIFIED: Main query endpoint without database dependencies
-@router.post("/query", response_model=QueryResponse)
-async def query_models(request: QueryRequest):
-    """Simplified aligned query endpoint - no database dependencies"""
+async def process_query_sync(request: QueryRequest, request_id: str) -> Dict[str, Any]:
+    """Process query synchronously - extracted for reuse"""
+    selected_models = get_models_for_mode(request.mode, request.max_models, request.prompt)
+    
+    # Build route request
+    route_req = RouteRequest(
+        prompt=request.prompt,
+        options=RouteOptions(
+            models=selected_models,
+            model_selection_mode=request.mode,
+            require_citations=True
+        )
+    )
+    
+    # Execute pipeline
+    result = await run_pipeline("judge", route_req, trace_id=request_id)
+    return result, selected_models
+# MAIN INTEGRATED QUERY ENDPOINT
+@router.post("/query", response_model=None)  # None to allow both QueryResponse and 202 response
+async def query_models(
+    request: QueryRequest,
+    fast: bool = Query(False, description="Execute synchronously if possible (<3s)"),
+    job_manager: JobManager = Depends(get_job_manager)
+):
+    """
+    Integrated query endpoint with async job support.
+    - fast=true: Attempts synchronous execution for queries estimated <3s
+    - fast=false or long queries: Returns 202 with job_id for polling
+    """
     start_time = time.time()
     request_id = str(uuid.uuid4())
     
-    try:
-        selected_models = get_models_for_mode(request.mode, request.max_models, request.prompt)
-        
-        # Build route request
-        route_req = RouteRequest(
-            prompt=request.prompt,
-            options=RouteOptions(
-                models=selected_models,
-                model_selection_mode=request.mode,
-                require_citations=True
+    # Estimate processing time
+    estimated_time = estimate_query_time(request)
+    logger.info(f"Query estimated time: {estimated_time}ms, fast={fast}")
+    
+    # Check if we should use async path
+    use_async = not fast or estimated_time > 3000
+    
+    if not use_async:
+        # Fast path: Try synchronous execution
+        try:
+            logger.info(f"Attempting fast synchronous execution for request {request_id}")
+            
+            # Use timeout to ensure we don't exceed 3s
+            result, selected_models = await asyncio.wait_for(
+                process_query_sync(request, request_id),
+                timeout=3.0
             )
+            
+            response_time_ms = int((time.time() - start_time) * 1000)
+            
+            # Build and return response synchronously
+            response = await build_query_response(
+                result, 
+                request, 
+                request_id, 
+                selected_models, 
+                response_time_ms
+            )
+            
+            logger.info(f"Fast path completed in {response_time_ms}ms")
+            return response
+            
+        except asyncio.TimeoutError:
+            logger.info(f"Fast path timed out, falling back to async")
+            use_async = True
+    
+    if use_async:
+        # Async path: Create job and return 202
+        logger.info(f"Using async job queue for request {request_id}")
+        
+        job_params = {
+            "prompt": request.prompt,
+            "mode": request.mode,
+            "max_models": request.max_models,
+            "budget_limit": request.budget_limit,
+            "include_reasoning": request.include_reasoning,
+            "request_id": request_id
+        }
+        
+        job_id = await job_manager.create_job(job_params)
+        
+        return JSONResponse(
+            status_code=202,
+            content={
+                "job_id": job_id,
+                "status": "accepted",
+                "estimated_time_ms": int(estimated_time),
+                "poll_url": f"/api/v1/jobs/{job_id}",
+                "poll_interval_ms": 500,
+                "message": "Query processing started. Poll the job status endpoint for results."
+            }
         )
+
+async def build_query_response(
+    result: Dict,
+    request: QueryRequest,
+    request_id: str,
+    selected_models: List[str],
+    response_time_ms: int
+) -> QueryResponse:
+    """Build the QueryResponse from pipeline results"""
+    # Extract results safely
+    candidates = result.get("candidates", [])
+    judge_scores = result.get("judge_scores", {})
+    winner_idx = result.get("winner_idx", 0)
+    
+    # Process model responses
+    model_metrics = []
+    total_cost = 0.0
+    models_succeeded = []
+    models_attempted = selected_models.copy()
+    
+    logger.info(f"Processing {len(candidates)} candidates")
+    
+    # Process each candidate
+    for i, candidate in enumerate(candidates):
+        is_winner = (i == winner_idx)
+        candidate_scores = judge_scores.get(i, {})
+        confidence = calculate_model_confidence(candidate, candidate_scores, is_winner)
         
-        # Execute pipeline
-        result = await run_pipeline("judge", route_req, trace_id=request_id)
-        response_time_ms = int((time.time() - start_time) * 1000)
+        # Estimate tokens and cost
+        text_length = len(getattr(candidate, 'text', ''))
+        tokens_used = max(50, text_length // 4)
+        cost = estimate_token_cost(candidate.model, tokens_used // 2, tokens_used // 2)
+        total_cost += cost
+        models_succeeded.append(candidate.model)
         
-        # Extract results safely
-        candidates = result.get("candidates", [])
-        judge_scores = result.get("judge_scores", {})
-        winner_idx = result.get("winner_idx", 0)
-        
-        # Process model responses
-        model_metrics = []
-        total_cost = 0.0
-        models_succeeded = []
-        models_attempted = selected_models.copy()
-        
-        logger.info(f"Processing {len(candidates)} candidates")
-        
-        # Process each candidate
-        for i, candidate in enumerate(candidates):
-            is_winner = (i == winner_idx)
-            candidate_scores = judge_scores.get(i, {})
-            confidence = calculate_model_confidence(candidate, candidate_scores, is_winner)
-            
-            # Estimate tokens and cost
-            text_length = len(getattr(candidate, 'text', ''))
-            tokens_used = max(50, text_length // 4)  # Rough estimate
-            cost = estimate_token_cost(candidate.model, tokens_used // 2, tokens_used // 2)
-            total_cost += cost
-            models_succeeded.append(candidate.model)
-            
-            # Create metric
-            metric = ModelMetrics(
-                model=candidate.model,
-                response=getattr(candidate, 'text', 'No response'),
-                confidence=confidence,
-                response_time_ms=getattr(candidate, 'gen_time_ms', 1500),
-                tokens_used=tokens_used,
-                cost=cost,
-                reliability_score=validate_confidence(candidate_scores.get('reliability', 0.8)),
-                consistency_score=validate_confidence(candidate_scores.get('consistency', 0.75)),
-                hallucination_risk=validate_confidence(candidate_scores.get('hallucination_risk', 0.15)),
-                citation_quality=validate_confidence(candidate_scores.get('citation_quality', 0.7)),
-                trait_scores={k: validate_confidence(v) for k, v in candidate_scores.items() if k not in ['reliability', 'consistency', 'hallucination_risk', 'citation_quality']},
-                rank_position=i + 1,
-                is_winner=is_winner,
-                error=getattr(candidate, 'error', None)
-            )
-            model_metrics.append(metric)
-        
-        # Sort by confidence and update rankings
-        if model_metrics:
-            model_metrics.sort(key=lambda x: x.confidence, reverse=True)
-            for i, metric in enumerate(model_metrics):
-                metric.rank_position = i + 1
-                metric.is_winner = (i == 0)
-        
-        # Get winner
-        winner = model_metrics[0] if model_metrics else None
-        
-        # Build comparison data
-        comparison = None
-        if model_metrics:
-            confidences = [m.confidence for m in model_metrics]
-            response_times = [m.response_time_ms for m in model_metrics]
-            
-            comparison = ModelComparison(
-                best_confidence=max(confidences),
-                worst_confidence=min(confidences),
-                avg_response_time=int(mean(response_times)),
-                total_cost=total_cost,
-                performance_spread=max(confidences) - min(confidences),
-                model_count=len(model_metrics)
-            )
-        
-        # Convert to ranking format
-        ranking = []
+        # Create metric
+        metric = ModelMetrics(
+            model=candidate.model,
+            response=getattr(candidate, 'text', 'No response'),
+            confidence=confidence,
+            response_time_ms=getattr(candidate, 'gen_time_ms', 1500),
+            tokens_used=tokens_used,
+            cost=cost,
+            reliability_score=validate_confidence(candidate_scores.get('reliability', 0.8)),
+            consistency_score=validate_confidence(candidate_scores.get('consistency', 0.75)),
+            hallucination_risk=validate_confidence(candidate_scores.get('hallucination_risk', 0.15)),
+            citation_quality=validate_confidence(candidate_scores.get('citation_quality', 0.7)),
+            trait_scores={k: validate_confidence(v) for k, v in candidate_scores.items() if k not in ['reliability', 'consistency', 'hallucination_risk', 'citation_quality']},
+            rank_position=i + 1,
+            is_winner=is_winner,
+            error=getattr(candidate, 'error', None)
+        )
+        model_metrics.append(metric)
+    
+    # Sort by confidence
+    if model_metrics:
+        model_metrics.sort(key=lambda x: x.confidence, reverse=True)
         for i, metric in enumerate(model_metrics):
-            ranking.append(RankedModel(
-                model=metric.model,
-                aggregate=RankedModelAggregate(
-                    score_mean=metric.confidence,
-                    score_stdev=0.05,
-                    vote_top_label="selected" if metric.is_winner else "candidate",
-                    vote_top_count=1 if metric.is_winner else 0,
-                    vote_total=1
-                ),
-                judgments=[
-                    RankedModelJudgment(
-                        judge_model="openai/gpt-4o-mini",
-                        score01=metric.confidence,
-                        label="quality_assessment",
-                        reasons=f"Model ranked #{metric.rank_position} with {metric.confidence:.1%} confidence",
-                        raw=f"Confidence: {metric.confidence}, Reliability: {metric.reliability_score}"
-                    )
-                ]
-            ))
+            metric.rank_position = i + 1
+            metric.is_winner = (i == 0)
+    
+    # Get winner
+    winner = model_metrics[0] if model_metrics else None
+    
+    # Build comparison data
+    comparison = None
+    if model_metrics:
+        confidences = [m.confidence for m in model_metrics]
+        response_times = [m.response_time_ms for m in model_metrics]
         
-        # Create winner object
-        winner_obj = None
-        if winner:
-            winner_obj = WinnerModel(
-                model=winner.model,
-                score=winner.confidence
-            )
-        
-        # Generate reasoning
-        reasoning = None
-        if request.include_reasoning and model_metrics:
-            reasoning = f"""Multi-Model Analysis Results:
+        comparison = ModelComparison(
+            best_confidence=max(confidences),
+            worst_confidence=min(confidences),
+            avg_response_time=int(mean(response_times)),
+            total_cost=total_cost,
+            performance_spread=max(confidences) - min(confidences),
+            model_count=len(model_metrics)
+        )
+    
+    # Convert to ranking format
+    ranking = []
+    for i, metric in enumerate(model_metrics):
+        ranking.append(RankedModel(
+            model=metric.model,
+            aggregate=RankedModelAggregate(
+                score_mean=metric.confidence,
+                score_stdev=0.05,
+                vote_top_label="selected" if metric.is_winner else "candidate",
+                vote_top_count=1 if metric.is_winner else 0,
+                vote_total=1
+            ),
+            judgments=[
+                RankedModelJudgment(
+                    judge_model="openai/gpt-4o-mini",
+                    score01=metric.confidence,
+                    label="quality_assessment",
+                    reasons=f"Model ranked #{metric.rank_position} with {metric.confidence:.1%} confidence",
+                    raw=f"Confidence: {metric.confidence}, Reliability: {metric.reliability_score}"
+                )
+            ]
+        ))
+    
+    # Create winner object
+    winner_obj = None
+    if winner:
+        winner_obj = WinnerModel(
+            model=winner.model,
+            score=winner.confidence
+        )
+    
+    # Generate reasoning
+    reasoning = None
+    if request.include_reasoning and model_metrics:
+        reasoning = f"""Multi-Model Analysis Results:
 
 Query: "{request.prompt[:80]}..."
 
@@ -322,43 +397,95 @@ Model Performance Summary:
 • Average response time: {mean(m.response_time_ms for m in model_metrics):.0f}ms
 
 Complete Rankings:"""
-            for metric in model_metrics:
-                reasoning += f"\n{metric.rank_position}. {metric.model} - {metric.confidence:.1%}"
+        for metric in model_metrics:
+            reasoning += f"\n{metric.rank_position}. {metric.model} - {metric.confidence:.1%}"
+    
+    # Build final response
+    final_confidence = validate_confidence(result.get("confidence", winner.confidence if winner else 0.8))
+    
+    return QueryResponse(
+        # Core fields
+        request_id=request_id,
+        answer=result.get("answer", winner.response if winner else "No response generated"),
+        confidence=final_confidence,
+        winner_model=winner.model if winner else "none",
+        response_time_ms=response_time_ms,
+        models_used=[m.model for m in model_metrics],
+        model_metrics=model_metrics,
+        model_comparison=comparison,
+        reasoning=reasoning,
+        total_cost=total_cost,
+        scores_by_trait=result.get("scores_by_trait", {}),
         
-        # Build final response
-        final_confidence = validate_confidence(result.get("confidence", winner.confidence if winner else 0.8))
-        
-        response = QueryResponse(
-            # Core fields
-            request_id=request_id,
-            answer=result.get("answer", winner.response if winner else "No response generated"),
-            confidence=final_confidence,
-            winner_model=winner.model if winner else "none",
-            response_time_ms=response_time_ms,
-            models_used=[m.model for m in model_metrics],
-            model_metrics=model_metrics,
-            model_comparison=comparison,
-            reasoning=reasoning,
-            total_cost=total_cost,
-            scores_by_trait=result.get("scores_by_trait", {}),
-            
-            # Frontend-expected fields
-            pipeline_id="judge",
-            decision_reason=f"Selected {winner.model if winner else 'best'} model based on confidence scoring",
-            models_attempted=models_attempted,
-            models_succeeded=models_succeeded,
-            ranking=ranking,
-            winner=winner_obj,
-            estimated_cost=total_cost  # Legacy mapping
+        # Frontend-expected fields
+        pipeline_id="judge",
+        decision_reason=f"Selected {winner.model if winner else 'best'} model based on confidence scoring",
+        models_attempted=models_attempted,
+        models_succeeded=models_succeeded,
+        ranking=ranking,
+        winner=winner_obj,
+        estimated_cost=total_cost
+    )
+
+# JOB STATUS ENDPOINT
+@router.get("/jobs/{job_id}")
+async def get_job_status(
+    job_id: str,
+    job_manager: JobManager = Depends(get_job_manager)
+):
+    """Get job status and results"""
+    status = await job_manager.get_job_status(job_id)
+    
+    if not status:
+        raise HTTPException(status_code=404, detail="Job not found")
+    
+    # Return appropriate status code based on job state
+    if status["status"] == JobStatus.COMPLETED:
+        return {
+            "job_id": job_id,
+            "status": "completed",
+            "result": status["result"],
+            "processing_time_ms": status.get("actual_time_ms"),
+            "completed_at": status.get("completed_at")
+        }
+    elif status["status"] == JobStatus.FAILED:
+        return JSONResponse(
+            status_code=500,
+            content={
+                "job_id": job_id,
+                "status": "failed",
+                "error": status["error"],
+                "failed_at": status.get("completed_at")
+            }
         )
+    else:
+        # Still processing
+        return JSONResponse(
+            status_code=202,
+            content={
+                "job_id": job_id,
+                "status": status["status"],
+                "progress": status.get("progress", 0),
+                "message": "Job is still processing",
+                "created_at": status.get("created_at"),
+                "estimated_completion": _estimate_completion(status)
+            }
+        )
+    
+def _estimate_completion(status: Dict) -> Optional[str]:
+    """Estimate completion time based on progress"""
+    if status.get("progress", 0) > 0 and status.get("created_at"):
+        from datetime import datetime
+        created = datetime.fromisoformat(status["created_at"])
+        elapsed = (datetime.utcnow() - created).total_seconds()
         
-        logger.info(f"Response built successfully: winner={response.winner_model}, cost={response.total_cost}")
-        return response
-        
-    except Exception as e:
-        logger.error(f"Query processing failed: {str(e)}")
-        logger.exception("Full traceback:")
-        raise HTTPException(status_code=500, detail=f"Query processing failed: {str(e)}")
+        if status["progress"] > 0:
+            total_estimated = elapsed / (status["progress"] / 100)
+            remaining = total_estimated - elapsed
+            completion = datetime.utcnow() + timedelta(seconds=remaining)
+            return completion.isoformat()
+    
+    return None
 
 # Health check
 @router.get("/health")
@@ -366,7 +493,7 @@ async def health_check():
     return {
         "status": "healthy", 
         "timestamp": time.time(),
-        "version": "2.0.0-simplified"
+        "version": "2.1.0-async"
     }
 
 @router.get("/usage")
@@ -597,94 +724,3 @@ async def usage_simple():
         ],
         "status": "success"
     }
-
-
-@router.post("/query-async")
-async def create_query(
-    request: QueryRequest,
-    background_tasks: BackgroundTasks,
-    fast: bool = Query(False, description="Execute synchronously if possible"),
-    job_manager: JobManager = Depends(get_job_manager)
-):
-    """
-    Enhanced query endpoint with async job support
-    """
-    # Estimate processing time
-    estimated_time = estimate_query_time(request)
-    
-    # Fast path: Execute synchronously if requested and possible
-    if fast and estimated_time < 3000:  # Less than 3 seconds
-        try:
-            result = await asyncio.wait_for(
-                run_pipeline(request),
-                timeout=3.0
-            )
-            return result
-        except asyncio.TimeoutError:
-            # Fall through to async path
-            pass
-    
-    # Async path: Create job and return 202
-    job_id = await job_manager.create_job(request.model_dump())
-    
-    return JSONResponse(
-        status_code=202,
-        content={
-            "job_id": job_id,
-            "status": "accepted",
-            "estimated_time_ms": estimated_time,
-            "poll_url": f"/api/v1/jobs/{job_id}",
-            "poll_interval_ms": 500
-        }
-    )
-
-@router.get("/jobs/{job_id}")
-async def get_job_status(
-    job_id: str,
-    job_manager: JobManager = Depends(get_job_manager)
-):
-    """Get job status and results"""
-    status = await job_manager.get_job_status(job_id)
-    
-    if not status:
-        raise HTTPException(status_code=404, detail="Job not found")
-    
-    # Return appropriate status code based on job state
-    if status["status"] == JobStatus.COMPLETED:
-        return {
-            "job_id": job_id,
-            "status": "completed",
-            "result": status["result"],
-            "processing_time_ms": status.get("actual_time_ms")
-        }
-    elif status["status"] == JobStatus.FAILED:
-        return JSONResponse(
-            status_code=500,
-            content={
-                "job_id": job_id,
-                "status": "failed",
-                "error": status["error"]
-            }
-        )
-    else:
-        # Still processing
-        return JSONResponse(
-            status_code=202,
-            content={
-                "job_id": job_id,
-                "status": status["status"],
-                "progress": status["progress"],
-                "message": "Job is still processing"
-            }
-        )
-    
-    # Let Response handle everything automatically
-    return Response(
-        content=json.dumps(data, separators=(',', ':')),
-        status_code=200,
-        media_type="application/json",
-        headers={
-            "Cache-Control": "no-cache",
-            "Connection": "close"
-        }
-    )

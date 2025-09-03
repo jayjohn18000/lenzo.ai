@@ -207,7 +207,7 @@ async def _fast_path_judge(req: RouteRequest, trace_id: str) -> Dict[str, Any]:
     return {
         "answer": winner.text,
         "winner_model": winner.model,
-        "confidence": 0.85,  # Fixed confidence for fast path
+        "confidence": 0.6,  # Fixed confidence for fast path
         "scores_by_trait": {"speed": 1.0},
         "citations": [],
         "models_attempted": [fast_model],

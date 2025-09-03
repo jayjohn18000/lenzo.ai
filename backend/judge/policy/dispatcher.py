@@ -1,8 +1,10 @@
 # backend/judge/policy/dispatcher.py
+import logging
 from typing import Tuple, Set, Optional
 from backend.judge.schemas import RouteRequest, PipelineID
 from backend.judge.config import settings
 
+logger = logging.getLogger(__name__)
 # Traits that should force verifiable, source-backed output
 FORCE_TOOL_TRAITS: Set[str] = {
     "non-hallucinated",
@@ -69,16 +71,12 @@ def should_escalate_after_prepass(
     judge_confidence: Optional[float],
     req: RouteRequest,
 ) -> bool:
-    """
-    Second-stage (dynamic) gate. Call this AFTER you run a cheap judge pre-pass.
-    If confidence is below threshold or other high-risk signals appear, escalate.
-    """
     if judge_confidence is None:
         return False
-
-    # primary rule: threshold from config (we set this to 0.85)
+    
+    # ADD THIS DEBUG LOG
+    logger.info(f"Escalation check: confidence={judge_confidence}, threshold={settings.CONF_THRESHOLD}, will_escalate={judge_confidence < settings.CONF_THRESHOLD}")
+    
     if judge_confidence < settings.CONF_THRESHOLD:
         return True
-
-    # any additional dynamic checks can live here later (e.g., strong candidate disagreement)
     return False

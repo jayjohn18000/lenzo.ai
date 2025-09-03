@@ -53,8 +53,8 @@ class Settings(BaseSettings):
     MAX_BATCH_SIZE: int = Field(default=8, env="MAX_BATCH_SIZE")
 
     # Confidence thresholds - FIXED: Added type annotations
-    MIN_CACHE_CONFIDENCE: float = Field(default=0.7, env="MIN_CACHE_CONFIDENCE")
-    CONF_THRESHOLD: float = Field(default=0.85, env="CONF_THRESHOLD")  # Single definition
+    MIN_CACHE_CONFIDENCE: float = Field(default=0.5, env="MIN_CACHE_CONFIDENCE")
+    CONF_THRESHOLD: float = Field(default=0.6, env="CONF_THRESHOLD")  # Single definition
 
     # Model rotation settings - FIXED: Added type annotations
     ENABLE_MODEL_ROTATION: bool = Field(default=True, env="ENABLE_MODEL_ROTATION")
