@@ -119,6 +119,21 @@ class QueryResponse(BaseModel):
 # --------------------------
 # Helpers
 # --------------------------
+# at top with other helpers
+def normalize_01(value: Any) -> float:
+    """
+    Turn 0..1 or 0..100 into 0..1.
+    - If value > 1 and <= 100, assume it's a percentage and divide by 100.
+    - Clamp to [0,1] in all cases.
+    """
+    try:
+        v = float(value)
+    except Exception:
+        return 0.0
+    if 1.0 < v <= 100.0:
+        v = v / 100.0
+    return max(0.0, min(1.0, v))
+
 def validate_confidence(value: float, source: str = "") -> float:
     """Clamp confidence to [0, 1] without scaling."""
     try:
