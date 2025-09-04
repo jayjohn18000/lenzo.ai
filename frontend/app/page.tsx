@@ -553,7 +553,7 @@ export default function NextAGIInterface() {
                         </div>
 
                         {/* All Model Results - ALIGNED to use model_metrics */}
-                        {result.model_metrics.length > 0 && (
+                        {result.model_metrics?.length > 0 && (
                           <div className={
                             viewMode === "comparison" 
                               ? "grid grid-cols-1 xl:grid-cols-2 gap-4"

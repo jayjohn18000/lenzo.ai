@@ -247,14 +247,15 @@ async def query_models(
         logger.info(f"Using async job queue for request {request_id}")
         
         job_params = {
-            "prompt": request.prompt,
-            "mode": request.mode,
-            "max_models": request.max_models,
-            "budget_limit": request.budget_limit,
-            "include_reasoning": request.include_reasoning,
-            "request_id": request_id
+            'request_id': request_id,  # Changed from 'id' as noted in comment
+            'prompt': request.prompt,
+            'mode': request.mode, 
+            'max_models': request.max_models,
+            # Don't nest these parameters
+            'status': 'pending',
+            'created_at': datetime.utcnow()
         }
-        
+
         job_id = await job_manager.create_job(job_params)
         
         return JSONResponse(

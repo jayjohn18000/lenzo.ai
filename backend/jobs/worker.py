@@ -3,7 +3,7 @@ import asyncio
 import logging
 from datetime import datetime
 from backend.jobs.manager import JobManager
-from backend.jobs.models import JobStatus
+from backend.jobs.models import JobStatus, QueryJob
 
 logger = logging.getLogger(__name__)
 
