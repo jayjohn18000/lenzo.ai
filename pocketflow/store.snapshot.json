@@ -19,7 +19,7 @@
     "CURSOR_TRACE_ID": "8275d35a103248aaaefa09ff9bb1c458",
     "SHLVL": "1",
     "PWD": "/Users/jaylenjohnson18/lenzo.ai/lenzo.ai",
-    "OLDPWD": "/Users/jaylenjohnson18/lenzo.ai/lenzo.ai/pocketflow",
+    "OLDPWD": "/Users/jaylenjohnson18/lenzo.ai/lenzo.ai",
     "HOMEBREW_PREFIX": "/usr/local",
     "HOMEBREW_CELLAR": "/usr/local/Cellar",
     "HOMEBREW_REPOSITORY": "/usr/local/Homebrew",
@@ -32,18 +32,24 @@
     "CONDA_PREFIX": "/Users/jaylenjohnson18/opt/anaconda3",
     "CONDA_DEFAULT_ENV": "base",
     "CONDA_PROMPT_MODIFIER": "(base) ",
+    "PAGER": "sh -c \"head -n 10000 | cat\"",
+    "npm_config_yes": "true",
+    "DISABLE_AUTO_UPDATE": "true",
+    "PIP_NO_INPUT": "true",
+    "COMPOSER_NO_INTERACTION": "1",
+    "CURSOR_AGENT": "1",
     "TERM_PROGRAM": "vscode",
     "TERM_PROGRAM_VERSION": "1.5.11",
     "LANG": "en_US.UTF-8",
     "COLORTERM": "truecolor",
+    "PYDEVD_DISABLE_FILE_VALIDATION": "1",
+    "VSCODE_DEBUGPY_ADAPTER_ENDPOINTS": "/Users/jaylenjohnson18/.cursor/extensions/ms-python.debugpy-2025.10.0-darwin-x64/.noConfigDebugAdapterEndpoints/endpoint-32709388607e8f0c.txt",
+    "BUNDLED_DEBUGPY_PATH": "/Users/jaylenjohnson18/.cursor/extensions/ms-python.debugpy-2025.10.0-darwin-x64/bundled/libs/debugpy",
     "GIT_ASKPASS": "/Volumes/Cursor Installer/Cursor.app/Contents/Resources/app/extensions/git/dist/askpass.sh",
     "VSCODE_GIT_ASKPASS_NODE": "/Volumes/Cursor Installer/Cursor.app/Contents/Frameworks/Cursor Helper (Plugin).app/Contents/MacOS/Cursor Helper (Plugin)",
     "VSCODE_GIT_ASKPASS_EXTRA_ARGS": "",
     "VSCODE_GIT_ASKPASS_MAIN": "/Volumes/Cursor Installer/Cursor.app/Contents/Resources/app/extensions/git/dist/askpass-main.js",
     "VSCODE_GIT_IPC_HANDLE": "/var/folders/r1/p23s81lx4cg1rh5r9mws8nxm0000gn/T/vscode-git-3fdb3997d1.sock",
-    "PYDEVD_DISABLE_FILE_VALIDATION": "1",
-    "VSCODE_DEBUGPY_ADAPTER_ENDPOINTS": "/Users/jaylenjohnson18/.cursor/extensions/ms-python.debugpy-2025.10.0-darwin-x64/.noConfigDebugAdapterEndpoints/endpoint-32709388607e8f0c.txt",
-    "BUNDLED_DEBUGPY_PATH": "/Users/jaylenjohnson18/.cursor/extensions/ms-python.debugpy-2025.10.0-darwin-x64/bundled/libs/debugpy",
     "VSCODE_INJECTION": "1",
     "ZDOTDIR": "/Users/jaylenjohnson18",
     "USER_ZDOTDIR": "/Users/jaylenjohnson18",
@@ -52,6 +58,7 @@
     "VIRTUAL_ENV": "/Users/jaylenjohnson18/lenzo.ai/venv",
     "PS1": "(venv) (base) %n@%m %1~ %# ",
     "VIRTUAL_ENV_PROMPT": "(venv) ",
+    "PYTHONPATH": ".",
     "_": "/Users/jaylenjohnson18/lenzo.ai/venv/bin/python"
   },
   "context": {
@@ -76,11 +83,13 @@
     },
     "apply_edits.enforce_api_key": {
       "route_imports_added": true,
-      "signature_patched": true
+      "signature_patched": false,
+      "syntax_valid": false,
+      "syntax_error": "invalid syntax (<unknown>, line 169)"
     },
     "tests": {
       "status": "failed",
-      "error": "Command failed (2): pytest -q\n"
+      "error": "Command failed (1): pytest -q\n"
     },
     "format": {
       "done": true

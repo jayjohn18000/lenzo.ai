@@ -54,7 +54,7 @@ class Settings(BaseSettings):
     )
 
     # Performance
-    ENABLE_CACHING: bool = Field(default=False, env="ENABLE_CACHING")
+    ENABLE_CACHING: bool = Field(default=True, env="ENABLE_CACHING")
     ENABLE_BATCH_JUDGING: bool = Field(default=False, env="ENABLE_BATCH_JUDGING")
     MAX_BATCH_SIZE: int = Field(default=8, env="MAX_BATCH_SIZE")
 
@@ -145,3 +145,10 @@ def get_settings() -> Settings:
 
 
 settings = get_settings()  # PRESERVED ✅
+
+
+# [PocketFlow] CACHE_TTL
+try:
+    CACHE_TTL: int = int(os.getenv("CACHE_TTL", "600"))
+except Exception:
+    CACHE_TTL = 600

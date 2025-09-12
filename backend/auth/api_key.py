@@ -405,9 +405,8 @@ class APIKeyManager:
 
 
 # FastAPI Dependencies
-async def verify_api_key(token: str = Security(security)) -> Dict[str, Any]:
+async def verify_api_key(token: str = Security(security), db: Session = Depends(get_db)) -> Dict[str, Any]:
     """FastAPI dependency for API key verification"""
-    db = next(get_db())
     api_manager = APIKeyManager(db)
 
     # Validate key

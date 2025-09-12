@@ -1,3 +1,6 @@
+from __future__ import annotations
+
+from backend.middleware.rate_limit import RateLimiter
 # backend/main.py
 """
 Enhanced main application that integrates all NextAGI components:
@@ -11,7 +14,6 @@ Enhanced main application that integrates all NextAGI components:
 - Development and debug endpoints
 """
 
-from __future__ import annotations
 
 import time
 import logging
@@ -928,3 +930,16 @@ if __name__ == "__main__":
         log_level="info",
         access_log=True,
     )
+
+
+# [PocketFlow] RateLimit mounted
+try:
+    from backend.judge.config import settings
+
+    redis_url = getattr(settings, "REDIS_URL", "redis://localhost:6379/0")
+    limit = int(getattr(settings, "RATE_LIMIT_PER_MINUTE", 60))
+    app.middleware("http")(RateLimiter(redis_url, limit_per_minute=limit))
+except Exception as e:
+    import logging
+
+    logging.warning(f"RateLimiter not mounted: {e}")

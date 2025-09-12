@@ -1,3 +1,6 @@
+import redis
+from backend.judge.config import settings
+import hashlib
 # backend/judge/pipelines/runner.py
 """
 Main pipeline runner that orchestrates different execution strategies
@@ -32,6 +35,19 @@ async def run_pipeline(
             # Check if we should escalate to tool_chain based on confidence
             confidence = result.get("confidence", 0.0)
             if should_escalate_after_prepass(confidence, req):
+                # [PocketFlow] cache-wrap
+                _pf_redis = None
+                if getattr(settings, 'ENABLE_CACHING', False):
+                    try:
+                        _pf_redis = redis.from_url(getattr(settings, 'REDIS_URL', 'redis://localhost:6379/0'), decode_responses=True)
+                        ck = _cache_key(locals().get('request') or locals().get('payload') or {})
+                        if _pf_redis:
+                            cached = _pf_redis.get(ck)
+                            if cached:
+                                return json.loads(cached)
+                    except Exception:
+                        pass
+
                 logger.info(
                     f"[{trace_id}] Escalating to tool_chain (confidence: {confidence:.3f})"
                 )
@@ -66,3 +82,24 @@ async def run_pipeline(
             f"[{trace_id}] Pipeline {pipeline_id} failed after {error_time}ms: {e}"
         )
         raise
+
+
+# [PocketFlow] cache_helpers
+def _cache_key(payload: dict) -> str:
+    # make a stable key from important request params
+    key_src = repr({
+        "prompt": payload.get("prompt"),
+        "models": payload.get("models"),
+        "traits": payload.get("traits"),
+    })
+    return "cache:" + hashlib.sha256(key_src.encode("utf-8")).hexdigest()
+
+
+
+# [PocketFlow] cache-set
+try:
+    if _pf_redis and 'ck' in locals() and 'response' in locals():
+        _pf_redis.setex(ck, getattr(settings, "CACHE_TTL", 600), json.dumps(response))
+except Exception:
+    pass
+
