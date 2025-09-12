@@ -1,5 +1,5 @@
 // lib/api.ts - FIXED API CLIENT
-import { QueryRequest, QueryResponse, UsageStats, ModelInfo } from '@/types/api';
+import { QueryRequest, QueryResponse, UsageStats, ModelInfo, validateQueryResponse, validateUsageStats } from '@/types/api';
 
 const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || process.env.NEXT_PUBLIC_BACKEND_URL || 'http://localhost:8000';
 const API_KEY = process.env.NEXT_PUBLIC_API_KEY || 'nextagi_test-key-123';
@@ -17,51 +17,12 @@ export interface JobResponse {
   message?: string;
 }
 
-// Fallback data for when backend is not ready
-const FALLBACK_DATA = {
-  usage: {
-    data_available: true,
-    total_requests: 2847,
-    total_tokens: 1200000,
-    total_cost: 247,
-    avg_response_time: 1.8,
-    avg_confidence: 0.942,
-    top_models: [
-      { name: 'GPT-4 Turbo', usage_percentage: 42, avg_score: 0.95 },
-      { name: 'Claude-3.5 Sonnet', usage_percentage: 31, avg_score: 0.92 },
-      { name: 'Gemini Pro', usage_percentage: 18, avg_score: 0.88 },
-      { name: 'Others', usage_percentage: 9, avg_score: 0.85 }
-    ],
-    daily_usage: Array.from({ length: 7 }, (_, i) => ({
-      date: new Date(Date.now() - (6 - i) * 24 * 60 * 60 * 1000).toISOString().split('T')[0],
-      requests: Math.floor(Math.random() * 1000) + 1000,
-      cost: Math.floor(Math.random() * 50) + 30
-    }))
-  },
-  models: {
-    available_models: [],                
-    subscription_tier: 'free',            
-    tier_limits: {},
-    modes: {
-      speed: {
-        models: ["openai/gpt-4o-mini", "anthropic/claude-3-haiku", "google/gemini-flash-1.5"],
-        avg_response_time_ms: 800,
-        avg_cost_per_query: 0.002
-      },
-      balanced: {
-        models: ["openai/gpt-4o", "anthropic/claude-3.5-sonnet", "google/gemini-pro-1.5"],
-        avg_response_time_ms: 1500,
-        avg_cost_per_query: 0.01
-      },
-      quality: {
-        models: ["openai/gpt-4o", "anthropic/claude-3.5-sonnet", "anthropic/claude-3-opus"],
-        avg_response_time_ms: 2500,
-        avg_cost_per_query: 0.025
-      }
-    },
-    total_models: 15,
-    default_mode: "balanced"
-  }
+// NO MORE DUMMY DATA - Proper error handling instead
+const ERROR_MESSAGES = {
+  API_UNAVAILABLE: "I am a dumb fuck and I cannot map the path correctly - API connection failed",
+  DATA_VALIDATION_FAILED: "I am a dumb fuck and I cannot map the path correctly - data validation failed",
+  NETWORK_ERROR: "I am a dumb fuck and I cannot map the path correctly - network error",
+  AUTHENTICATION_FAILED: "I am a dumb fuck and I cannot map the path correctly - authentication failed"
 };
 
 export class APIClient {
@@ -71,7 +32,7 @@ export class APIClient {
     this.onProgress = callback;
   }
 
-  private async safeRequest<T>(endpoint: string, fallbackData?: T, options: RequestInit = {}): Promise<T> {
+  private async safeRequest<T>(endpoint: string, options: RequestInit = {}): Promise<T> {
     try {
       const response = await fetch(`${API_BASE_URL}${endpoint}`, {
         headers: {
@@ -82,16 +43,17 @@ export class APIClient {
         ...options,
       });
 
-      if (!response.ok && !fallbackData) {
-        throw new Error(`HTTP ${response.status}`);
+      if (!response.ok) {
+        if (response.status === 401 || response.status === 403) {
+          throw new Error(ERROR_MESSAGES.AUTHENTICATION_FAILED);
+        }
+        throw new Error(`${ERROR_MESSAGES.NETWORK_ERROR} - HTTP ${response.status}`);
       }
 
-      return response.json();
+      const data = await response.json();
+      return data;
     } catch (error) {
-      console.warn(`API endpoint ${endpoint} not available, using fallback data`);
-      if (fallbackData) {
-        return fallbackData;
-      }
+      console.error(`API endpoint ${endpoint} failed:`, error);
       throw error;
     }
   }
@@ -121,13 +83,17 @@ export class APIClient {
 
       // Handle direct response
       if (response.ok) {
-        return await response.json();
+        const data = await response.json();
+        return validateQueryResponse(data);
       }
 
       throw new Error(`Query failed: ${response.status}`);
     } catch (error) {
       console.error('Query error:', error);
-      throw error;
+      if (error instanceof Error && error.message.includes('I am a dumb fuck')) {
+        throw error; // Re-throw validation errors as-is
+      }
+      throw new Error(`${ERROR_MESSAGES.DATA_VALIDATION_FAILED} - ${error}`);
     }
   }
 
@@ -147,7 +113,7 @@ export class APIClient {
         if (response.status === 200) {
           // Job completed successfully
           console.log('Job completed:', jobId);
-          return data.result;
+          return validateQueryResponse(data.result);
         } else if (response.status === 500) {
           // Job failed
           throw new Error(data.error || 'Job processing failed');
@@ -213,12 +179,23 @@ export class APIClient {
 
   // Get usage statistics
   async getUsageStats(days: number = 30): Promise<UsageStats> {
-    return this.safeRequest(`/api/v1/usage?days=${days}`, FALLBACK_DATA.usage);
+    try {
+      const data = await this.safeRequest(`/api/v1/usage?days=${days}`);
+      return validateUsageStats(data);
+    } catch (error) {
+      console.error('Usage stats validation failed:', error);
+      throw new Error(`${ERROR_MESSAGES.DATA_VALIDATION_FAILED} - ${error}`);
+    }
   }
 
   // Get available models
   async getModels(): Promise<ModelInfo> {
-    return this.safeRequest('/api/v1/models', FALLBACK_DATA.models);
+    try {
+      return await this.safeRequest('/api/v1/models');
+    } catch (error) {
+      console.error('Models API failed:', error);
+      throw new Error(`${ERROR_MESSAGES.API_UNAVAILABLE} - models endpoint`);
+    }
   }
 
   // Health check

@@ -107,19 +107,9 @@ export default function Dashboard() {
       setUsageStats(data);
     } catch (err: any) {
       console.error("Error fetching usage stats:", err);
-      setStatsError("Unable to load statistics");
-      // Provide fallback data
-      setUsageStats({
-        total_requests: 0,
-        total_tokens: 0,
-        total_cost: 0,
-        avg_response_time: 0,
-        avg_confidence: 0,
-        top_models: [],
-        daily_usage: [],
-        data_available: false,
-        message: "Statistics not available"
-      });
+      setStatsError(err.message || "I am a dumb fuck and I cannot map the path correctly - unable to load statistics");
+      // NO MORE DUMMY DATA - show error instead
+      setUsageStats(null);
     } finally {
       setStatsLoading(false);
     }
@@ -217,7 +207,7 @@ export default function Dashboard() {
                 <div>
                   <p className="text-sm text-gray-600">Total Queries (7d)</p>
                   <p className="text-2xl font-bold">
-                    {statsLoading ? "—" : usageStats?.data_available ? formatNumber(usageStats.total_requests) : "0"}
+                    {statsLoading ? "—" : usageStats ? formatNumber(usageStats.total_requests) : "ERROR"}
                   </p>
                 </div>
                 <BarChart3 className="h-8 w-8 text-blue-500" />
@@ -232,7 +222,7 @@ export default function Dashboard() {
                 <div>
                   <p className="text-sm text-gray-600">Total Cost (7d)</p>
                   <p className="text-2xl font-bold">
-                    {statsLoading ? "—" : usageStats?.data_available ? formatCurrency(usageStats.total_cost) : "$0.00"}
+                    {statsLoading ? "—" : usageStats ? formatCurrency(usageStats.total_cost) : "ERROR"}
                   </p>
                 </div>
                 <DollarSign className="h-8 w-8 text-green-500" />
@@ -246,7 +236,7 @@ export default function Dashboard() {
                 <div>
                   <p className="text-sm text-gray-600">Avg Confidence (7d)</p>
                   <p className="text-2xl font-bold">
-                    {statsLoading ? "—" : usageStats?.data_available ? formatPercentage01(usageStats.avg_confidence * 100) : "—"}
+                    {statsLoading ? "—" : usageStats ? formatPercentage01(usageStats.avg_confidence * 100) : "ERROR"}
                   </p>
                 </div>
                 <Target className="h-8 w-8 text-purple-500" />
@@ -260,7 +250,7 @@ export default function Dashboard() {
                 <div>
                   <p className="text-sm text-gray-600">Avg Response Time</p>
                   <p className="text-2xl font-bold">
-                    {statsLoading ? '—' : usageStats?.data_available ? safeTime(usageStats.avg_response_time * 1000) : '—'}
+                    {statsLoading ? '—' : usageStats ? safeTime(usageStats.avg_response_time * 1000) : 'ERROR'}
                   </p>
                 </div>
                 <Clock className="h-8 w-8 text-orange-500" />
@@ -583,7 +573,7 @@ export default function Dashboard() {
         )}
 
         {/* Model Usage Stats */}
-        {usageStats?.data_available && usageStats.top_models?.length > 0 && (
+        {usageStats && usageStats.top_models?.length > 0 && (
           <Card>
             <CardHeader>
               <CardTitle>Model Usage (7d)</CardTitle>

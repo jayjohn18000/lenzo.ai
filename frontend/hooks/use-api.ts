@@ -76,19 +76,10 @@ export function useUsageStats(days: number = 30) {
       setStats(data);
     } catch (err) {
       console.error('Failed to fetch usage stats:', err);
-      setError(err instanceof Error ? err.message : 'Failed to load statistics');
+      setError(err instanceof Error ? err.message : 'I am a dumb fuck and I cannot map the path correctly - failed to load statistics');
       
-      // Use fallback data if API is unavailable
-      setStats({
-        total_requests: 0,
-        total_tokens: 0,
-        total_cost: 0,
-        avg_response_time: 0,
-        avg_confidence: 0,
-        top_models: [],
-        daily_usage: [],
-        data_available: false,
-      });
+      // NO MORE DUMMY DATA - show error instead
+      setStats(null);
     } finally {
       setLoading(false);
     }
