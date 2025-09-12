@@ -55,25 +55,27 @@
     "USER_ZDOTDIR": "/Users/jaylenjohnson18",
     "TERM": "xterm-256color",
     "VSCODE_PROFILE_INITIALIZED": "1",
-    "VIRTUAL_ENV": "/Users/jaylenjohnson18/lenzo.ai/venv",
     "PS1": "(venv) (base) %n@%m %1~ %# ",
+    "VIRTUAL_ENV": "/Users/jaylenjohnson18/lenzo.ai/venv",
     "VIRTUAL_ENV_PROMPT": "(venv) ",
     "PYTHONPATH": ".",
     "_": "/Users/jaylenjohnson18/lenzo.ai/venv/bin/python"
   },
   "context": {
     "ticket": {
-      "type": "enforce_api_key",
-      "title": "Secure /api/v1/query with API key",
+      "type": "add_frontend_auth",
+      "title": "Add API key authentication to frontend requests",
       "acceptance": [
-        "Unauthenticated POST /api/v1/query returns 401 or 403",
-        {
-          "Authenticated request (Authorization": "Bearer <key>) returns 200/202 or 429"
-        }
+        "Frontend includes Authorization header in API requests",
+        "API key is configurable via environment variables",
+        "Proper error handling for authentication failures",
+        "Graceful fallback when API key is missing"
       ],
       "notes": [
-        "Uses backend/auth/api_key.py verify_api_key",
-        "Injects Depends(verify_api_key) into /api/v1/query handler"
+        "Add API key configuration to frontend environment",
+        "Update API client to include Authorization headers",
+        "Add authentication error handling in UI",
+        "Provide clear error messages for auth failures"
       ]
     },
     "paths": {
@@ -81,11 +83,10 @@
       "routes_v1": "/Users/jaylenjohnson18/lenzo.ai/lenzo.ai/backend/api/v1/routes.py",
       "auth_api_key": "/Users/jaylenjohnson18/lenzo.ai/lenzo.ai/backend/auth/api_key.py"
     },
-    "apply_edits.enforce_api_key": {
-      "route_imports_added": true,
-      "signature_patched": false,
-      "syntax_valid": false,
-      "syntax_error": "invalid syntax (<unknown>, line 169)"
+    "apply_frontend_edits.add_frontend_auth": {
+      "env_example_created": true,
+      "api_client_updated": true,
+      "main_api_updated": true
     },
     "tests": {
       "status": "failed",
@@ -96,13 +97,21 @@
     },
     "smoke": {
       "unauth": {
-        "error": "[Errno 61] Connection refused",
-        "ok": false
+        "status": 403,
+        "ok": true
       },
       "auth": {
-        "error": "[Errno 61] Connection refused",
+        "status": 401,
         "ok": false
       }
+    },
+    "cursor.task": {
+      "path": "/Users/jaylenjohnson18/lenzo.ai/lenzo.ai/.cursor/tasks/add-api-key-authentication-to-frontend-requests.md",
+      "slug": "add-api-key-authentication-to-frontend-requests"
+    },
+    "patch": {
+      "applied": false,
+      "reason": "no diff files found"
     }
   }
 }

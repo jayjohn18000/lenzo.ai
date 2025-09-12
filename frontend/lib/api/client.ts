@@ -47,7 +47,8 @@ import { z } from 'zod';
         const response = await fetch(url, {
           ...options,
           headers: {
-            'Content-Type': 'application/json',
+          'Content-Type': 'application/json',
+          ...(this.apiKey && { 'Authorization': `Bearer ${this.apiKey}` }),
             ...(this.apiKey && { 'X-API-Key': this.apiKey }),
             ...options.headers,
           },

@@ -1,90 +1,52 @@
-// frontend/app/api/route/route.ts - CORRECTED VERSION WITH TIMEOUT HANDLING
+// frontend/app/api/route/route.ts - DIRECT BACKEND PASSTHROUGH
 export async function POST(req: Request) {
   const body = await req.json();
   const backend = process.env.NEXT_PUBLIC_BACKEND_URL || "http://127.0.0.1:8000";
   
-  // Transform the request to match your enhanced API
-  const transformedBody = {
-    prompt: body.prompt || "Test question",
-    category: body.category || "general",  // Add this
-    expected_traits: ["accurate", "clear"], // Add this
-    options: {
-      rubric: {},
-      require_citations: false
-    }
-  };
-  
-  console.log('🔗 Calling: http://127.0.0.1:8000/api/v1/query');
-  console.log('📦 Request body:', transformedBody);
+  console.log('🔗 Calling backend:', `${backend}/api/v1/query`);
+  console.log('📦 Request body:', body);
 
   try {
     // Create AbortController for timeout handling
     const controller = new AbortController();
     const timeoutId = setTimeout(() => controller.abort(), 90000); // 90 second timeout
     
-    const r = await fetch(`${backend}/api/v1/query`, {
+    const response = await fetch(`${backend}/api/v1/query`, {
       method: "POST",
       headers: { 
-        "Content-Type": "application/json"
+        "Content-Type": "application/json",
+        // Forward API key if available
+        ...(process.env.NEXT_PUBLIC_API_KEY && {
+          "Authorization": `Bearer ${process.env.NEXT_PUBLIC_API_KEY}`
+        })
       },
-      body: JSON.stringify(transformedBody),
+      body: JSON.stringify(body), // Direct passthrough
       signal: controller.signal
     });
 
     clearTimeout(timeoutId);
-    console.log(`📡 Response status: ${r.status}`);
+    console.log(`📡 Response status: ${response.status}`);
     
-    if (!r.ok) {
-      const errorText = await r.text();
+    if (!response.ok) {
+      const errorText = await response.text();
       console.error('❌ Backend error:', errorText);
       
-      if (r.status === 403 || r.status === 401) {
-        throw new Error(`Authentication required - Status ${r.status}. The enhanced routes may require API key authentication.`);
+      if (response.status === 403 || response.status === 401) {
+        throw new Error(`Authentication required - Status ${response.status}. Please configure API key.`);
       }
       
-      if (r.status === 422) {
-        throw new Error(`Validation error - Status ${r.status}. Check request format: ${errorText}`);
+      if (response.status === 422) {
+        throw new Error(`Validation error - Status ${response.status}. Check request format: ${errorText}`);
       }
       
-      throw new Error(`Backend error: ${r.status} - ${errorText}`);
+      throw new Error(`Backend error: ${response.status} - ${errorText}`);
     }
 
-    const data = await r.json();
-    console.log('✅ Success response:', data);
+    const data = await response.json();
+    console.log('✅ Backend response:', data);
     
-    // Transform the enhanced API response to match your frontend expectations
-    const transformedResponse = {
-      prompt: transformedBody.prompt,
-      responses: data.model_details?.map(detail => ({
-        model: detail.model,
-        response: detail.response
-      })) || [{ 
-        model: data.winner_model || 'unknown', 
-        response: data.answer || 'No response'
-      }],
-      ranking: data.model_details?.map(detail => ({
-        model: detail.model,
-        aggregate: { score_mean: detail.confidence },
-        judgments: []
-      })) || [{
-        model: data.winner_model || 'unknown',
-        aggregate: { score_mean: data.confidence || 0.8 },
-        judgments: []
-      }],
-      winner: { 
-        model: data.winner_model || 'unknown', 
-        score: data.confidence || 0.8 
-      },
-      // Include the enhanced data for your dashboard
-      enhanced_data: {
-        model_details: data.model_details || [],
-        reasoning: data.reasoning || '',
-        total_cost: data.total_cost || 0,
-        response_time_ms: data.response_time_ms || 0
-      }
-    };
-    
-    return new Response(JSON.stringify(transformedResponse), {
+    // Direct passthrough - no transformation needed
+    return new Response(JSON.stringify(data), {
       status: 200,
       headers: { "Content-Type": "application/json" },
     });
@@ -97,37 +59,21 @@ export async function POST(req: Request) {
     
     if (error instanceof Error) {
       if (error.name === 'AbortError') {
-        errorMessage = 'Request timeout - Backend took longer than 30 seconds to respond. This suggests an issue with the AI model API calls.';
+        errorMessage = 'Request timeout - Backend took longer than 90 seconds to respond.';
         statusCode = 504;
       } else {
         errorMessage = error.message;
       }
     }
     
-    // Return a fallback response that won't break your frontend
-    const fallbackResponse = {
-      prompt: body.prompt || 'Error occurred',
-      responses: [{ 
-        model: 'error-handler', 
-        response: `Request failed: ${errorMessage}. Please check backend logs and ensure API keys are configured.`
-      }],
-      ranking: [{
-        model: 'error-handler',
-        aggregate: { score_mean: 0.0 },
-        judgments: []
-      }],
-      winner: { 
-        model: 'error-handler', 
-        score: 0.0 
-      },
+    // Return error response
+    return new Response(JSON.stringify({
       error: {
         message: errorMessage,
         timestamp: new Date().toISOString(),
-        debug_info: "Check that your backend is running and OpenRouter API key is configured"
+        debug_info: "Check that your backend is running and API key is configured"
       }
-    };
-    
-    return new Response(JSON.stringify(fallbackResponse), {
+    }), {
       status: statusCode,
       headers: { "Content-Type": "application/json" },
     });

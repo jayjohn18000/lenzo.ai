@@ -2,6 +2,7 @@
 __pycache__/
 *.py[cod]
 *.pyo
+*.pyc
 *.egg-info/
 .eggs/
 .dist-info/
@@ -51,3 +52,9 @@ node_modules/
 models/
 checkpoints/
 artifacts/
+
+# editor/agent
+.cursor/
+.pocketflow_cache/
+pocketflow/_cache/
+pocketflow/patches/**/tmp/*

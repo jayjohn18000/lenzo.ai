@@ -1,0 +1,12 @@
+type: add_frontend_auth
+title: "Add API key authentication to frontend requests"
+acceptance:
+  - Frontend includes Authorization header in API requests
+  - API key is configurable via environment variables
+  - Proper error handling for authentication failures
+  - Graceful fallback when API key is missing
+notes:
+  - Add API key configuration to frontend environment
+  - Update API client to include Authorization headers
+  - Add authentication error handling in UI
+  - Provide clear error messages for auth failures

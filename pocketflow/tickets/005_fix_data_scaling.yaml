@@ -1,0 +1,12 @@
+type: fix_data_scaling
+title: "Fix data scaling and transformation issues"
+acceptance:
+  - Confidence values display as 0-100% (not thousands)
+  - Cost values display correctly with proper formatting
+  - Winner model selection works correctly
+  - Response time displays in appropriate units (ms/s)
+notes:
+  - Fix confidence scaling in frontend components
+  - Ensure proper number formatting for costs
+  - Fix winner model field mapping
+  - Add proper data validation and error handling

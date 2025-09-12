@@ -110,7 +110,7 @@ export default function NextAGIInterface() {
       setSelectedModel(data.winner_model || "");
       
       // Animate confidence score using the correct field
-      const targetConfidence = data.confidence ? data.confidence * 100 : 85;
+      const targetConfidence = data.confidence ? Math.min(100, Math.max(0, data.confidence * 100)) : 85;
       let currentConf = 0;
       const interval = setInterval(() => {
         currentConf += 2;

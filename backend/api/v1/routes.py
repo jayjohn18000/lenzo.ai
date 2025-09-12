@@ -1,5 +1,6 @@
 from __future__ import annotations
 from backend.auth.api_key import verify_api_key
+
 # backend/api/v1/routes.py
 
 import time
@@ -92,6 +93,7 @@ class WinnerModel(BaseModel):
 
 class QueryResponse(BaseModel):
     """Fully aligned response with frontend expectations"""
+
     # Core fields
     request_id: str
     answer: str
@@ -135,6 +137,7 @@ def normalize_01(value: Any) -> float:
         v = v / 100.0
     return max(0.0, min(1.0, v))
 
+
 def validate_confidence(value: float, source: str = "") -> float:
     """Clamp confidence to [0, 1] without scaling."""
     try:
@@ -146,10 +149,26 @@ def validate_confidence(value: float, source: str = "") -> float:
 
 def get_models_for_mode(mode: str, max_models: int, prompt: str = "") -> List[str]:
     model_pools = {
-        "speed": ["openai/gpt-4o-mini", "anthropic/claude-3-haiku", "google/gemini-flash-1.5"],
-        "quality": ["openai/gpt-4o", "anthropic/claude-3.5-sonnet", "anthropic/claude-3-opus"],
-        "balanced": ["openai/gpt-4o", "anthropic/claude-3.5-sonnet", "google/gemini-pro-1.5"],
-        "cost": ["openai/gpt-4o-mini", "anthropic/claude-3-haiku", "google/gemini-flash-1.5"],
+        "speed": [
+            "openai/gpt-4o-mini",
+            "anthropic/claude-3-haiku",
+            "google/gemini-flash-1.5",
+        ],
+        "quality": [
+            "openai/gpt-4o",
+            "anthropic/claude-3.5-sonnet",
+            "anthropic/claude-3-opus",
+        ],
+        "balanced": [
+            "openai/gpt-4o",
+            "anthropic/claude-3.5-sonnet",
+            "google/gemini-pro-1.5",
+        ],
+        "cost": [
+            "openai/gpt-4o-mini",
+            "anthropic/claude-3-haiku",
+            "google/gemini-flash-1.5",
+        ],
     }
     selected = model_pools.get(mode, model_pools["balanced"])
     return selected[:max_models]
@@ -171,7 +190,9 @@ def estimate_token_cost(model: str, tokens_in: int, tokens_out: int) -> float:
     return (tokens_in * costs["input"] / 1000) + (tokens_out * costs["output"] / 1000)
 
 
-def calculate_model_confidence(candidate, judge_scores: Optional[Dict[str, float]] = None, is_winner: bool = False) -> float:
+def calculate_model_confidence(
+    candidate, judge_scores: Optional[Dict[str, float]] = None, is_winner: bool = False
+) -> float:
     base_confidence = 0.7
     if hasattr(candidate, "text") and candidate.text:
         text_length = len(candidate.text.split())
@@ -182,7 +203,7 @@ def calculate_model_confidence(candidate, judge_scores: Optional[Dict[str, float
             judge_avg = mean(judge_scores.values()) if judge_scores.values() else 0.7
         except Exception:
             judge_avg = 0.7
-        base_confidence = (base_confidence * 0.4 + judge_avg * 0.6)
+        base_confidence = base_confidence * 0.4 + judge_avg * 0.6
     if is_winner:
         base_confidence = min(1.0, base_confidence + 0.05)
     return validate_confidence(base_confidence)
@@ -194,12 +215,16 @@ def estimate_query_time(request: QueryRequest) -> float:
     time_per_model = model_times.get(request.mode, 800)
     total_time = base_time + (time_per_model * request.max_models)
     complexity_factor = min(len(request.prompt) / 100, 3.0)
-    total_time *= (1 + complexity_factor * 0.2)
+    total_time *= 1 + complexity_factor * 0.2
     return total_time
 
 
-async def process_query_sync(request: QueryRequest, request_id: str) -> Tuple[Dict[str, Any], List[str]]:
-    selected_models = get_models_for_mode(request.mode, request.max_models, request.prompt)
+async def process_query_sync(
+    request: QueryRequest, request_id: str
+) -> Tuple[Dict[str, Any], List[str]]:
+    selected_models = get_models_for_mode(
+        request.mode, request.max_models, request.prompt
+    )
     route_req = RouteRequest(
         prompt=request.prompt,
         options=RouteOptions(
@@ -220,7 +245,8 @@ async def query_models(
     request: QueryRequest,
     fast: bool = Query(False, description="Execute synchronously if possible (<3s)"),
     job_manager: JobManager = Depends(get_job_manager),
-current_key: dict = Depends(verify_api_key)):
+    current_key: dict = Depends(verify_api_key),
+):
     """
     Integrated query endpoint with async job support.
     - fast=true: Attempts synchronous execution for queries estimated <3s
@@ -239,7 +265,9 @@ current_key: dict = Depends(verify_api_key)):
     # Fast (sync) path
     if not use_async:
         try:
-            logger.info(f"Attempting fast synchronous execution for request {request_id}")
+            logger.info(
+                f"Attempting fast synchronous execution for request {request_id}"
+            )
             result, selected_models = await asyncio.wait_for(
                 process_query_sync(request, request_id),
                 timeout=3.0,
@@ -255,7 +283,9 @@ current_key: dict = Depends(verify_api_key)):
             use_async = True
         except Exception as e:
             # If synchronous execution fails for any other reason, fall back to async job
-            logger.warning(f"Fast path error ({type(e).__name__}): {e}; falling back to async")
+            logger.warning(
+                f"Fast path error ({type(e).__name__}): {e}; falling back to async"
+            )
             use_async = True
 
     # Async path
@@ -308,7 +338,9 @@ async def build_query_response(
 
         text_length = len(getattr(candidate, "text", "") or "")
         tokens_used = max(50, text_length // 4)
-        cost = estimate_token_cost(getattr(candidate, "model", "") or "", tokens_used // 2, tokens_used // 2)
+        cost = estimate_token_cost(
+            getattr(candidate, "model", "") or "", tokens_used // 2, tokens_used // 2
+        )
         total_cost += cost
         models_succeeded.append(getattr(candidate, "model", "unknown") or "unknown")
 
@@ -319,14 +351,28 @@ async def build_query_response(
             response_time_ms=int(getattr(candidate, "gen_time_ms", 1500) or 1500),
             tokens_used=int(tokens_used),
             cost=float(cost),
-            reliability_score=validate_confidence(candidate_scores.get("reliability", 0.8)),
-            consistency_score=validate_confidence(candidate_scores.get("consistency", 0.75)),
-            hallucination_risk=validate_confidence(candidate_scores.get("hallucination_risk", 0.15)),
-            citation_quality=validate_confidence(candidate_scores.get("citation_quality", 0.7)),
+            reliability_score=validate_confidence(
+                candidate_scores.get("reliability", 0.8)
+            ),
+            consistency_score=validate_confidence(
+                candidate_scores.get("consistency", 0.75)
+            ),
+            hallucination_risk=validate_confidence(
+                candidate_scores.get("hallucination_risk", 0.15)
+            ),
+            citation_quality=validate_confidence(
+                candidate_scores.get("citation_quality", 0.7)
+            ),
             trait_scores={
                 k: validate_confidence(v)
                 for k, v in candidate_scores.items()
-                if k not in ["reliability", "consistency", "hallucination_risk", "citation_quality"]
+                if k
+                not in [
+                    "reliability",
+                    "consistency",
+                    "hallucination_risk",
+                    "citation_quality",
+                ]
             },
             rank_position=i + 1,
             is_winner=is_winner,
@@ -379,7 +425,9 @@ async def build_query_response(
             )
         )
 
-    winner_obj = WinnerModel(model=winner.model, score=winner.confidence) if winner else None
+    winner_obj = (
+        WinnerModel(model=winner.model, score=winner.confidence) if winner else None
+    )
 
     reasoning = None
     if request.include_reasoning and model_metrics:
@@ -389,27 +437,45 @@ async def build_query_response(
             f'Query: "{request.prompt[:80]}..."',
             "",
             f'Winner: {winner.model if winner else "Unknown"}',
-            f'• Confidence: {winner.confidence:.1%}' if winner else "• Confidence: n/a",
-            f'• Response time: {winner.response_time_ms}ms' if winner else "• Response time: n/a",
-            f'• Reliability: {winner.reliability_score:.1%}' if winner else "• Reliability: n/a",
-            f'• Hallucination risk: {winner.hallucination_risk:.1%}' if winner else "• Hallucination risk: n/a",
+            f"• Confidence: {winner.confidence:.1%}" if winner else "• Confidence: n/a",
+            (
+                f"• Response time: {winner.response_time_ms}ms"
+                if winner
+                else "• Response time: n/a"
+            ),
+            (
+                f"• Reliability: {winner.reliability_score:.1%}"
+                if winner
+                else "• Reliability: n/a"
+            ),
+            (
+                f"• Hallucination risk: {winner.hallucination_risk:.1%}"
+                if winner
+                else "• Hallucination risk: n/a"
+            ),
             "",
             "Model Performance Summary:",
-            f'• Models analyzed: {len(model_metrics)}',
-            f'• Average confidence: {mean(m.confidence for m in model_metrics):.1%}',
-            f'• Average response time: {mean(m.response_time_ms for m in model_metrics):.0f}ms',
+            f"• Models analyzed: {len(model_metrics)}",
+            f"• Average confidence: {mean(m.confidence for m in model_metrics):.1%}",
+            f"• Average response time: {mean(m.response_time_ms for m in model_metrics):.0f}ms",
             "",
             "Complete Rankings:",
         ]
         for metric in model_metrics:
-            reasoning_lines.append(f"{metric.rank_position}. {metric.model} - {metric.confidence:.1%}")
+            reasoning_lines.append(
+                f"{metric.rank_position}. {metric.model} - {metric.confidence:.1%}"
+            )
         reasoning = "\n".join(reasoning_lines)
 
-    final_confidence = validate_confidence(result.get("confidence", winner.confidence if winner else 0.8))
+    final_confidence = validate_confidence(
+        result.get("confidence", winner.confidence if winner else 0.8)
+    )
 
     return QueryResponse(
         request_id=request_id,
-        answer=result.get("answer", winner.response if winner else "No response generated"),
+        answer=result.get(
+            "answer", winner.response if winner else "No response generated"
+        ),
         confidence=final_confidence,
         winner_model=winner.model if winner else "none",
         response_time_ms=response_time_ms,
@@ -436,7 +502,8 @@ async def build_query_response(
 async def get_job_status(
     job_id: str,
     job_manager: JobManager = Depends(get_job_manager),
-current_key: dict = Depends(verify_api_key)):
+    current_key: dict = Depends(verify_api_key),
+):
     """Get job status and results."""
     status_payload = await job_manager.get_job_status(job_id)
     if not status_payload:
@@ -490,7 +557,7 @@ def _estimate_completion(status_payload: Dict[str, Any]) -> Optional[str]:
             elapsed = (now - created).total_seconds()
             total_estimated = elapsed / (progress / 100.0)
             remaining = max(0.0, total_estimated - elapsed)
-            completion = (now + timedelta(seconds=remaining))
+            completion = now + timedelta(seconds=remaining)
             return completion.isoformat()
     except Exception:
         pass
@@ -506,7 +573,10 @@ async def health_check(current_key: dict = Depends(verify_api_key)):
 
 
 @router.get("/usage")
-async def get_usage_statistics(days: int = Query(default=30, ge=1, le=365), current_key: dict = Depends(verify_api_key)):
+async def get_usage_statistics(
+    days: int = Query(default=30, ge=1, le=365),
+    current_key: dict = Depends(verify_api_key),
+):
     try:
         days = min(days, 30)
         base_date = datetime.now() - timedelta(days=days)
@@ -538,9 +608,15 @@ async def get_usage_statistics(days: int = Query(default=30, ge=1, le=365), curr
             "days_requested": days,
             "status": "success",
         }
-        return JSONResponse(status_code=200, content=response_data, headers={"Cache-Control": "no-cache"})
+        return JSONResponse(
+            status_code=200,
+            content=response_data,
+            headers={"Cache-Control": "no-cache"},
+        )
     except Exception as e:
-        return JSONResponse(status_code=500, content={"error": str(e), "status": "failed"})
+        return JSONResponse(
+            status_code=500, content={"error": str(e), "status": "failed"}
+        )
 
 
 @router.get("/usage-test")
@@ -610,14 +686,24 @@ async def usage_debug(current_key: dict = Depends(verify_api_key)):
         daily_usage = []
         for i in range(7):
             date = base_date + timedelta(days=i)
-            daily_usage.append({"date": date.strftime("%Y-%m-%d"), "requests": 100 + i, "cost": 10.0 + i})
+            daily_usage.append(
+                {
+                    "date": date.strftime("%Y-%m-%d"),
+                    "requests": 100 + i,
+                    "cost": 10.0 + i,
+                }
+            )
         print(f"Step 2 complete: Generated {len(daily_usage)} daily entries")
         response_data = {
             "status": "debug_success",
             "total_requests": sum(d["requests"] for d in daily_usage),
             "total_cost": round(sum(d["cost"] for d in daily_usage), 2),
             "daily_usage": daily_usage,
-            "debug_info": {"endpoint": "usage-debug", "timestamp": datetime.now().isoformat(), "step": "final"},
+            "debug_info": {
+                "endpoint": "usage-debug",
+                "timestamp": datetime.now().isoformat(),
+                "step": "final",
+            },
         }
         json_str = json.dumps(response_data, separators=(",", ":"))
         json_bytes = json_str.encode("utf-8")
@@ -627,7 +713,12 @@ async def usage_debug(current_key: dict = Depends(verify_api_key)):
             content=json_bytes,
             status_code=200,
             media_type="application/json",
-            headers={"Content-Length": str(content_length), "Cache-Control": "no-cache", "Connection": "close", "X-Debug": "success"},
+            headers={
+                "Content-Length": str(content_length),
+                "Cache-Control": "no-cache",
+                "Connection": "close",
+                "X-Debug": "success",
+            },
         )
     except Exception as e:
         print(f"❌ Debug endpoint failed: {e}")

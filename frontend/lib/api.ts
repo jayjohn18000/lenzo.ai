@@ -75,6 +75,7 @@ export class APIClient {
       const response = await fetch(`${API_BASE_URL}${endpoint}`, {
         headers: {
           'Content-Type': 'application/json',
+          ...(API_KEY && { 'Authorization': `Bearer ${API_KEY}` }),
           ...options.headers,
         },
         ...options,
@@ -103,6 +104,7 @@ export class APIClient {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
+          ...(API_KEY && { 'Authorization': `Bearer ${API_KEY}` }),
         },
         body: JSON.stringify(request),
       });

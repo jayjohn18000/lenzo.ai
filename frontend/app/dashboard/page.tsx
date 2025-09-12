@@ -394,7 +394,7 @@ export default function Dashboard() {
                   </CardTitle>
                   <div className="flex items-center gap-2">
                     <Badge className={getConfidenceColor(result.confidence)}>
-                      Confidence: {formatPercentage01(result.confidence)}
+                      Confidence: {formatPercentage01(result.confidence * 100)}
                     </Badge>
                     <Badge variant="outline">
                       {formatTimeMs(result.response_time_ms)}
@@ -501,7 +501,7 @@ export default function Dashboard() {
                             <div className="flex items-center gap-2">
                               <ConfidenceIcon className={`h-4 w-4 ${getConfidenceColor(metric.confidence).split(' ')[0]}`} />
                               <Badge className={getConfidenceColor(metric.confidence)}>
-                                {formatPercentage01(metric.confidence)}
+                                {formatPercentage01(metric.confidence * 100)}
                               </Badge>
                             </div>
                           </div>

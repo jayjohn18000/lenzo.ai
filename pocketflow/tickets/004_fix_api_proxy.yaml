@@ -1,0 +1,12 @@
+type: fix_api_proxy
+title: "Fix frontend API proxy to match backend contract"
+acceptance:
+  - Frontend calls backend directly without transformation
+  - Request format matches backend QueryRequest schema
+  - Response format matches backend QueryResponse schema
+  - Authentication headers are properly forwarded
+notes:
+  - Remove request/response transformation in frontend/api/route/route.ts
+  - Ensure direct passthrough to backend /api/v1/query
+  - Add proper error handling for authentication failures
+  - Maintain timeout handling for long-running queries

@@ -4,6 +4,7 @@ from pocketflow.store import SharedStore
 from pocketflow.nodes.cursor_sync_rules import CursorSyncRules
 from pocketflow.nodes.plan_ticket import PlanTicket
 from pocketflow.nodes.apply_edits import ApplyEditsFixed as ApplyEdits
+from pocketflow.nodes.apply_frontend_edits import ApplyFrontendEdits
 from pocketflow.nodes.run_tests import RunTests
 from pocketflow.nodes.format_code import FormatCode
 from pocketflow.nodes.smoke_check import SmokeCheck
@@ -33,7 +34,18 @@ def main():
 
     # First pass: plan → apply → tests → format → smoke
     PlanTicket(args.ticket).run(store)
-    ApplyEdits().run(store)
+
+    # Route to appropriate editor based on ticket type
+    ticket_type = store.context.get("ticket", {}).get("type", "")
+    if (
+        ticket_type.startswith("fix_api_proxy")
+        or ticket_type.startswith("fix_data_scaling")
+        or ticket_type.startswith("add_frontend_auth")
+    ):
+        ApplyFrontendEdits().run(store)
+    else:
+        ApplyEdits().run(store)
+
     RunTests().run(store)
     FormatCode().run(store)
     SmokeCheck().run(store)

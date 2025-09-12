@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from backend.middleware.rate_limit import RateLimiter
+
 # backend/main.py
 """
 Enhanced main application that integrates all NextAGI components:
