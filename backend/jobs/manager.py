@@ -72,7 +72,13 @@ class JobManager:
         # 1) Cached live status
         cached = await self.redis.get(f"job:{job_id}:status")
         if cached:
-            return json.loads(cached)
+            status_data = json.loads(cached)
+            # If job is completed, merge with result data
+            if status_data.get("status") == JobStatus.COMPLETED.value:
+                result = await self.redis.get(f"job_result:{job_id}")
+                if result:
+                    status_data["result"] = json.loads(result)
+            return status_data
 
         # 2) Completed result present
         result = await self.redis.get(f"job_result:{job_id}")
