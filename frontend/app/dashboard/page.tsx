@@ -31,6 +31,7 @@ import {
 
 // ALIGNED: Import updated types
 import { QueryResponse, ModelMetrics, UsageStats, DisplayModelMetrics, QueryRequest, ModelSelectionMode } from "@/types/api";
+import { apiClient } from "@/lib/api";
 
 export default function Dashboard() {
   // Query UI state
@@ -128,7 +129,7 @@ export default function Dashboard() {
     return () => clearInterval(interval);
   }, [fetchUsageStats]);
 
-  // ALIGNED: Query submission using correct API format
+  // ALIGNED: Query submission using API client with async job polling
   const handleSubmit = useCallback(async () => {
     if (!prompt.trim()) return;
     
@@ -145,22 +146,12 @@ export default function Dashboard() {
         include_reasoning: useAdvanced,
       };
 
-      const response = await fetch("/api/v1/query", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          // Remove hardcoded API key - let backend handle auth
-        },
-        body: JSON.stringify(requestBody),
-      });
-
-      if (!response.ok) {
-        const errorData = await response.text();
-        throw new Error(`API Error ${response.status}: ${errorData}`);
-      }
-
-      const data: QueryResponse = await response.json();
-      console.log("✅ Aligned API response:", data);
+      console.log("🚀 Starting query with API client:", requestBody);
+      
+      // Use API client which handles 202 responses and polling automatically
+      const data: QueryResponse = await apiClient.query(requestBody);
+      
+      console.log("✅ Query completed with real results:", data);
       
       // ALIGNED: Data is now in correct format, no normalization needed
       setResult(data);

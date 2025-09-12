@@ -2,6 +2,7 @@
 import { QueryRequest, QueryResponse, UsageStats, ModelInfo } from '@/types/api';
 
 const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000';
+const API_KEY = process.env.NEXT_PUBLIC_API_KEY;
 
 // Job response interface
 export interface JobResponse {

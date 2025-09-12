@@ -144,7 +144,8 @@ class JobManager:
             return
 
         try:
-            with self.db_session_factory() as session:
+            session = self.db_session_factory()
+            try:
                 rec = session.get(JobRecord, job.request_id)
                 if rec is None:
                     rec = JobRecord(
@@ -163,6 +164,8 @@ class JobManager:
                     if not rec.status:
                         rec.status = JobStatus.PENDING.value
                 session.commit()
+            finally:
+                session.close()
         except Exception as e:
             # Gate DB failures so queueing still works
             logger.warning("Job DB persistence failed for %s: %s", job.request_id, e)

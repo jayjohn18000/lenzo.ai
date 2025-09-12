@@ -21,6 +21,7 @@ from sqlalchemy import (
     Boolean,
     Float,
     Text,
+    ForeignKey,
 )
 from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.orm import sessionmaker, relationship
@@ -57,7 +58,7 @@ class APIKey(Base):
     __tablename__ = "api_keys"
 
     id = Column(Integer, primary_key=True, index=True)
-    user_id = Column(Integer, index=True)
+    user_id = Column(Integer, ForeignKey("users.id"), index=True)
     name = Column(String, default="Default Key")
     key_hash = Column(String, unique=True, index=True)
     key_prefix = Column(String, index=True)  # First 8 chars for display
@@ -77,8 +78,8 @@ class UsageRecord(Base):
     __tablename__ = "usage_records"
 
     id = Column(Integer, primary_key=True, index=True)
-    user_id = Column(Integer, index=True)
-    api_key_id = Column(Integer, index=True)
+    user_id = Column(Integer, ForeignKey("users.id"), index=True)
+    api_key_id = Column(Integer, ForeignKey("api_keys.id"), index=True)
     request_id = Column(String, index=True)
 
     # Request details
@@ -406,21 +407,22 @@ class APIKeyManager:
 
 # FastAPI Dependencies
 async def verify_api_key(
-    token: str = Security(security), db: Session = Depends(get_db)
+    token: str = Security(security)
 ) -> Dict[str, Any]:
     """FastAPI dependency for API key verification"""
-    api_manager = APIKeyManager(db)
+    with get_db() as db_session:
+        api_manager = APIKeyManager(db_session)
 
-    # Validate key
-    key_info = await api_manager.validate_api_key(token.credentials)
+        # Validate key
+        key_info = await api_manager.validate_api_key(token.credentials)
 
-    # Check rate limits
-    await api_manager.check_rate_limits(key_info["user_id"], key_info["api_key_id"])
+        # Check rate limits
+        await api_manager.check_rate_limits(key_info["user_id"], key_info["api_key_id"])
 
-    # Increment counters
-    await api_manager.increment_rate_limits(key_info["user_id"])
+        # Increment counters
+        await api_manager.increment_rate_limits(key_info["user_id"])
 
-    return key_info
+        return key_info
 
 
 async def get_api_manager(db: Session = Depends(get_db)) -> APIKeyManager:
