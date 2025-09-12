@@ -24,7 +24,7 @@ export function StatsCards({ stats, loading }: StatsCardsProps) {
         <CardContent>
           <div className="text-2xl font-bold">{stats.total_requests.toLocaleString()}</div>
           <p className="text-xs text-muted-foreground">
-            +{safePercentage(0.12)} from last month
+            +{safePercentage(0.12, { expectsFraction: true })} from last month
           </p>
         </CardContent>
       </Card>
@@ -39,7 +39,7 @@ export function StatsCards({ stats, loading }: StatsCardsProps) {
             {safeTime(stats.avg_response_time * 1000)}
           </div>
           <p className="text-xs text-muted-foreground">
-            {safePercentage(-0.08)} improvement
+            {safePercentage(-0.08, { expectsFraction: true })} improvement
           </p>
         </CardContent>
       </Card>
@@ -66,7 +66,7 @@ export function StatsCards({ stats, loading }: StatsCardsProps) {
         </CardHeader>
         <CardContent>
           <div className="text-2xl font-bold">
-            {safePercentage(stats.avg_confidence)}
+            {safePercentage(stats.avg_confidence, { expectsFraction: true })}
           </div>
           <p className="text-xs text-muted-foreground">
             Across all models

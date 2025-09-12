@@ -146,7 +146,7 @@ export default function NextAGIInterface() {
       active ? 'bg-blue-500 text-white' : 'bg-white/10 text-gray-300'
     }`}>
       <div className="text-xs font-semibold mb-1">{name}</div>
-      <div className="text-sm font-bold">{score ? safePercentage(score) : '--'}</div>
+      <div className="text-sm font-bold">{score ? safePercentage(score, { expectsFraction: false }) : '--'}</div>
     </div>
   );
 
@@ -185,7 +185,7 @@ export default function NextAGIInterface() {
             <div className="flex items-center gap-2">
               <ConfidenceIcon className={`h-4 w-4 ${getConfidenceColor(metric.confidence).split(' ')[0]}`} />
               <Badge className={`${getConfidenceColor(metric.confidence)} border-0`}>
-                {safePercentage(metric.confidence)}%
+                {safePercentage(metric.confidence, { expectsFraction: true })}%
               </Badge>
             </div>
           </div>
@@ -274,7 +274,7 @@ export default function NextAGIInterface() {
               <div className="flex flex-wrap gap-1">
                 {Object.entries(metric.trait_scores).map(([trait, score]) => (
                   <Badge key={trait} className="bg-white/10 text-gray-300 border-white/20 text-xs">
-                    {trait}: {safePercentage(score)}%
+                    {trait}: {safePercentage(score, { expectsFraction: true })}%
                   </Badge>
                 ))}
               </div>
@@ -487,7 +487,7 @@ export default function NextAGIInterface() {
                           style={{ width: `${confidence}%` }}
                         />
                       </div>
-                      <span className="text-sm font-semibold">{safePercentage(confidence)}%</span>
+                      <span className="text-sm font-semibold">{safePercentage(confidence / 100, { expectsFraction: true })}%</span>
                     </div>
                   </div>
 

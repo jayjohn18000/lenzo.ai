@@ -66,7 +66,7 @@ export function ModelMetricsCard({ metrics, loading, winner }: ModelMetricsCardP
                 <div>
                   <div className="flex justify-between mb-1">
                     <span className="text-muted-foreground">Confidence</span>
-                    <span className="font-medium">{safePercentage(confidence)}</span>
+                    <span className="font-medium">{safePercentage(confidence, { expectsFraction: true })}</span>
                   </div>
                   <Progress value={confidence * 100} className="h-2" />
                 </div>
@@ -121,7 +121,7 @@ function MetricBadge({ label, value, format = 'percentage', inverse }: MetricBad
   
   const variant = getVariant(displayValue, inverse);
   const formatted = format === 'percentage' 
-    ? safePercentage(displayValue, { digits: 0 }) 
+    ? safePercentage(displayValue, { digits: 0, expectsFraction: true }) 
     : safeToFixed(displayValue, 2);
 
   return (

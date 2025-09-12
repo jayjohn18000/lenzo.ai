@@ -56,7 +56,7 @@ export function ConfidenceChart({
       </ResponsiveContainer>
       <div className="absolute inset-0 flex items-center justify-center">
         <div className="text-center">
-          <div className="text-2xl font-bold text-white">{safePercentage(confidence)}%</div>
+          <div className="text-2xl font-bold text-white">{safePercentage(confidence, { expectsFraction: true })}%</div>
           <div className="text-xs text-gray-400">Confidence</div>
         </div>
       </div>

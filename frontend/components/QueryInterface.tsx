@@ -76,7 +76,7 @@ export default function QueryInterface() {
             <div className="flex items-center justify-between">
               <h3 className="text-lg font-semibold">Best Answer</h3>
               <Badge variant="secondary">
-                Confidence: {safePercentage(result.confidence)}%
+                Confidence: {safePercentage(result.confidence, { expectsFraction: true })}%
               </Badge>
             </div>
             
