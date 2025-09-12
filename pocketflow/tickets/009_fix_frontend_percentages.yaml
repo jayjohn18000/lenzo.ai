@@ -1,0 +1,12 @@
+type: fix_frontend_percentages
+title: "Fix frontend percentage calculations to display 0-100%"
+acceptance:
+  - All confidence values display as 0-100% (not thousands)
+  - Percentage calculations are properly bounded
+  - No more wild percentage values in UI
+  - All percentage formatters use consistent scaling
+notes:
+  - Fix confidence scaling in all frontend components
+  - Ensure proper percentage formatting functions
+  - Add bounds checking for percentage values
+  - Update all percentage displays to use 0-100 range

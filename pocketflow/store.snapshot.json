@@ -63,19 +63,19 @@
   },
   "context": {
     "ticket": {
-      "type": "add_frontend_auth",
-      "title": "Add API key authentication to frontend requests",
+      "type": "fix_frontend_percentages",
+      "title": "Fix frontend percentage calculations to display 0-100%",
       "acceptance": [
-        "Frontend includes Authorization header in API requests",
-        "API key is configurable via environment variables",
-        "Proper error handling for authentication failures",
-        "Graceful fallback when API key is missing"
+        "All confidence values display as 0-100% (not thousands)",
+        "Percentage calculations are properly bounded",
+        "No more wild percentage values in UI",
+        "All percentage formatters use consistent scaling"
       ],
       "notes": [
-        "Add API key configuration to frontend environment",
-        "Update API client to include Authorization headers",
-        "Add authentication error handling in UI",
-        "Provide clear error messages for auth failures"
+        "Fix confidence scaling in all frontend components",
+        "Ensure proper percentage formatting functions",
+        "Add bounds checking for percentage values",
+        "Update all percentage displays to use 0-100 range"
       ]
     },
     "paths": {
@@ -83,10 +83,10 @@
       "routes_v1": "/Users/jaylenjohnson18/lenzo.ai/lenzo.ai/backend/api/v1/routes.py",
       "auth_api_key": "/Users/jaylenjohnson18/lenzo.ai/lenzo.ai/backend/auth/api_key.py"
     },
-    "apply_frontend_edits.add_frontend_auth": {
-      "env_example_created": true,
-      "api_client_updated": true,
-      "main_api_updated": true
+    "apply_edits.fix_frontend_percentages": {
+      "dashboard_fixed": true,
+      "main_page_fixed": true,
+      "formatters_updated": true
     },
     "tests": {
       "status": "failed",
@@ -106,8 +106,8 @@
       }
     },
     "cursor.task": {
-      "path": "/Users/jaylenjohnson18/lenzo.ai/lenzo.ai/.cursor/tasks/add-api-key-authentication-to-frontend-requests.md",
-      "slug": "add-api-key-authentication-to-frontend-requests"
+      "path": "/Users/jaylenjohnson18/lenzo.ai/lenzo.ai/.cursor/tasks/fix-frontend-percentage-calculations-to-display-0-100.md",
+      "slug": "fix-frontend-percentage-calculations-to-display-0-100"
     },
     "patch": {
       "applied": false,

@@ -251,7 +251,7 @@ export default function Dashboard() {
                 <div>
                   <p className="text-sm text-gray-600">Avg Confidence (7d)</p>
                   <p className="text-2xl font-bold">
-                    {statsLoading ? "—" : usageStats?.data_available ? formatPercentage01(usageStats.avg_confidence) : "—"}
+                    {statsLoading ? "—" : usageStats?.data_available ? formatPercentage01(Math.min(100, Math.max(0, usageStats.avg_confidence * 100))) : "—"}
                   </p>
                 </div>
                 <Target className="h-8 w-8 text-purple-500" />
@@ -394,7 +394,7 @@ export default function Dashboard() {
                   </CardTitle>
                   <div className="flex items-center gap-2">
                     <Badge className={getConfidenceColor(result.confidence)}>
-                      Confidence: {formatPercentage01(result.confidence * 100)}
+                      Confidence: {formatPercentage01(Math.min(100, Math.max(0, result.confidence * 100)))}
                     </Badge>
                     <Badge variant="outline">
                       {formatTimeMs(result.response_time_ms)}
@@ -501,7 +501,7 @@ export default function Dashboard() {
                             <div className="flex items-center gap-2">
                               <ConfidenceIcon className={`h-4 w-4 ${getConfidenceColor(metric.confidence).split(' ')[0]}`} />
                               <Badge className={getConfidenceColor(metric.confidence)}>
-                                {formatPercentage01(metric.confidence * 100)}
+                                {formatPercentage01(Math.min(100, Math.max(0, metric.confidence * 100)))}
                               </Badge>
                             </div>
                           </div>

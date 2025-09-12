@@ -39,7 +39,7 @@ class Settings(BaseSettings):
     )
 
     # Toggle: run the worker inside the API process (lifespan) vs. separate process
-    RUN_WORKER_IN_PROCESS: bool = Field(default=False, env="RUN_WORKER_IN_PROCESS")
+    RUN_WORKER_IN_PROCESS: bool = Field(default=True, env="RUN_WORKER_IN_PROCESS")
 
     # Debug mode
     DEBUG: bool = Field(default=True, env="DEBUG")

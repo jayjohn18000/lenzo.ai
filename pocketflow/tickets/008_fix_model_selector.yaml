@@ -1,0 +1,11 @@
+type: fix_model_selector
+title: "Add missing load_performance_history method to SmartModelSelector"
+acceptance:
+  - SmartModelSelector has load_performance_history method
+  - Method loads performance data from database or file
+  - No more AttributeError on startup
+  - Performance history is properly initialized
+notes:
+  - Add load_performance_history method to SmartModelSelector class
+  - Add save_performance_history method for persistence
+  - Ensure graceful handling when no history exists

@@ -1,0 +1,11 @@
+type: fix_worker_process
+title: "Enable worker process for async job execution"
+acceptance:
+  - RUN_WORKER_IN_PROCESS is set to True in settings
+  - Worker process starts automatically with the main application
+  - Async jobs are processed and completed instead of returning 202 Accepted
+  - Job status endpoint returns completed results
+notes:
+  - Set RUN_WORKER_IN_PROCESS=True in backend/judge/config.py
+  - Ensure worker starts in main.py lifespan function
+  - Test that jobs are actually processed through the pipeline

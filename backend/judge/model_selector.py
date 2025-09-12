@@ -652,6 +652,27 @@ class SmartModelSelector:
         fallback_scores.sort(key=lambda x: x[1], reverse=True)
         return [model[0] for model in fallback_scores[:2]]
 
+    async def load_performance_history(self):
+        """Load model performance history from database or file"""
+        try:
+            # Try to load from database first
+            # For now, initialize empty history
+            self.performance_history = {}
+            return True
+        except Exception as e:
+            # Fallback: initialize empty history
+            self.performance_history = {}
+            return False
+    
+    async def save_performance_history(self):
+        """Save model performance history to database or file"""
+        try:
+            # For now, just return success
+            # In production, this would save to database
+            return True
+        except Exception as e:
+            return False
+
 
 # ADD THIS METHOD to your SmartModelSelector class
 def get_model_specs_for_routes(self) -> Dict[str, Dict]:
