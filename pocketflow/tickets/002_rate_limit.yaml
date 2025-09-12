@@ -1,0 +1,11 @@
+type: rate_limit
+title: "Add per-key rate limiting"
+params:
+  limit_per_minute: 60
+acceptance:
+  - Burst above limit yields HTTP 429
+  - Normal traffic unaffected
+notes:
+  - Installs backend/middleware/rate_limit.py
+  - Mounts middleware in backend/main.py
+  - Uses settings.REDIS_URL if present

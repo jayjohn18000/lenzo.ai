@@ -73,10 +73,12 @@ def should_escalate_after_prepass(
 ) -> bool:
     if judge_confidence is None:
         return False
-    
+
     # ADD THIS DEBUG LOG
-    logger.info(f"Escalation check: confidence={judge_confidence}, threshold={settings.CONF_THRESHOLD}, will_escalate={judge_confidence < settings.CONF_THRESHOLD}")
-    
+    logger.info(
+        f"Escalation check: confidence={judge_confidence}, threshold={settings.CONF_THRESHOLD}, will_escalate={judge_confidence < settings.CONF_THRESHOLD}"
+    )
+
     if judge_confidence < settings.CONF_THRESHOLD:
         return True
     return False

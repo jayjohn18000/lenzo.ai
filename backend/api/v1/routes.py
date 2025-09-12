@@ -1,3 +1,5 @@
+from backend.auth.api_key import verify_api_key
+from fastapi import Depends, HTTPException
 # backend/api/v1/routes.py
 from __future__ import annotations
 
@@ -164,7 +166,7 @@ def estimate_token_cost(model: str, tokens_in: int, tokens_out: int) -> float:
     }
     costs = {"input": 0.001, "output": 0.001}
     for key in cost_map:
-        if key in model.lower():
+        if key in model.lower(, current_key=Depends(verify_api_key)):
             costs = cost_map[key]
             break
     return (tokens_in * costs["input"] / 1000) + (tokens_out * costs["output"] / 1000)
@@ -219,7 +221,7 @@ async def query_models(
     request: QueryRequest,
     fast: bool = Query(False, description="Execute synchronously if possible (<3s)"),
     job_manager: JobManager = Depends(get_job_manager),
-):
+, current_key=Depends(verify_api_key)):
     """
     Integrated query endpoint with async job support.
     - fast=true: Attempts synchronous execution for queries estimated <3s
@@ -300,7 +302,7 @@ async def build_query_response(
 
     logger.info(f"Processing {len(candidates)} candidates")
 
-    for i, candidate in enumerate(candidates):
+    for i, candidate in enumerate(candidates, current_key=Depends(verify_api_key)):
         is_winner = i == winner_idx
         candidate_scores = judge_scores.get(i, {})
         confidence = calculate_model_confidence(candidate, candidate_scores, is_winner)
@@ -435,7 +437,7 @@ async def build_query_response(
 async def get_job_status(
     job_id: str,
     job_manager: JobManager = Depends(get_job_manager),
-):
+, current_key=Depends(verify_api_key)):
     """Get job status and results."""
     status_payload = await job_manager.get_job_status(job_id)
     if not status_payload:
@@ -500,12 +502,12 @@ def _estimate_completion(status_payload: Dict[str, Any]) -> Optional[str]:
 # Health & Usage Endpoints
 # --------------------------
 @router.get("/health")
-async def health_check():
+async def health_check(, current_key=Depends(verify_api_key)):
     return {"status": "healthy", "timestamp": time.time(), "version": "2.1.0-async"}
 
 
 @router.get("/usage")
-async def get_usage_statistics(days: int = Query(default=30, ge=1, le=365)):
+async def get_usage_statistics(days: int = Query(default=30, ge=1, le=365), current_key=Depends(verify_api_key)):
     try:
         days = min(days, 30)
         base_date = datetime.now() - timedelta(days=days)
@@ -543,7 +545,7 @@ async def get_usage_statistics(days: int = Query(default=30, ge=1, le=365)):
 
 
 @router.get("/usage-test")
-async def usage_test_minimal():
+async def usage_test_minimal(, current_key=Depends(verify_api_key)):
     test_data = {
         "test": "success",
         "timestamp": datetime.now().isoformat(),
@@ -565,7 +567,7 @@ async def usage_test_minimal():
 
 
 @router.get("/debug/headers")
-async def debug_response_headers():
+async def debug_response_headers(, current_key=Depends(verify_api_key)):
     debug_data = {
         "message": "Debug response",
         "timestamp": datetime.now().isoformat(),
@@ -585,7 +587,7 @@ async def debug_response_headers():
 
 
 @router.get("/usage-minimal")
-async def usage_minimal():
+async def usage_minimal(, current_key=Depends(verify_api_key)):
     data = {"status": "ok", "requests": 1000, "cost": 50.5}
     json_bytes = json.dumps(data, separators=(",", ":")).encode("utf-8")
     return Response(
@@ -600,7 +602,7 @@ async def usage_minimal():
 
 
 @router.get("/usage-debug")
-async def usage_debug():
+async def usage_debug(, current_key=Depends(verify_api_key)):
     try:
         print("🔍 Starting usage debug endpoint...")
         basic_data = {"test": "step1", "requests": 1000, "cost": 50.0}
@@ -644,7 +646,7 @@ async def usage_debug():
 
 
 @router.get("/usage-simple")
-async def usage_simple():
+async def usage_simple(, current_key=Depends(verify_api_key)):
     data = {
         "total_requests": 2500,
         "total_tokens": 1200000,

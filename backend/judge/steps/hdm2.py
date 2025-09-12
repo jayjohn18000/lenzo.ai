@@ -23,17 +23,22 @@ import re
 from typing import Dict, List, Tuple
 from backend.judge.schemas import Candidate
 
-SPLIT_SENT = re.compile(r'(?<=[\.\!\?])\s+')
-HAS_URL = re.compile(r'https?://\S+')
-HAS_BRACKET_CITE = re.compile(r'\[\d+\]|\([^)]+(?:source|ref|doi)[^)]+\)', re.IGNORECASE)
-HAS_YEAR = re.compile(r'\b(19|20)\d{2}\b')
-HAS_NUMBER = re.compile(r'\b\d[\d,]*(\.\d+)?\b')
-TEMPORAL_WORDS = re.compile(
-    r'\b(today|yesterday|recent(ly)?|last\s+(year|month|week)|this\s+(year|month|week)|'
-    r'january|february|march|april|may|june|july|august|september|october|november|december)\b',
-    re.IGNORECASE
+SPLIT_SENT = re.compile(r"(?<=[\.\!\?])\s+")
+HAS_URL = re.compile(r"https?://\S+")
+HAS_BRACKET_CITE = re.compile(
+    r"\[\d+\]|\([^)]+(?:source|ref|doi)[^)]+\)", re.IGNORECASE
 )
-HEDGES = re.compile(r'\b(might|may|could|likely|probably|apparently|reportedly|seems)\b', re.IGNORECASE)
+HAS_YEAR = re.compile(r"\b(19|20)\d{2}\b")
+HAS_NUMBER = re.compile(r"\b\d[\d,]*(\.\d+)?\b")
+TEMPORAL_WORDS = re.compile(
+    r"\b(today|yesterday|recent(ly)?|last\s+(year|month|week)|this\s+(year|month|week)|"
+    r"january|february|march|april|may|june|july|august|september|october|november|december)\b",
+    re.IGNORECASE,
+)
+HEDGES = re.compile(
+    r"\b(might|may|could|likely|probably|apparently|reportedly|seems)\b", re.IGNORECASE
+)
+
 
 def _risk_for_sentence(s: str) -> Tuple[float, List[str]]:
     reasons: List[str] = []
@@ -78,6 +83,7 @@ def _risk_for_sentence(s: str) -> Tuple[float, List[str]]:
     risk = max(0.0, min(1.0, risk))
     return risk, reasons
 
+
 def detect_hallucinations(candidate: Candidate) -> Dict:
     """
     Analyze candidate.text and tag risky spans. Output used to prioritize RefChecker.
@@ -106,14 +112,16 @@ def detect_hallucinations(candidate: Candidate) -> Dict:
         elif risk >= 0.33:
             label = "medium"
 
-        risk_spans.append({
-            "span": s,
-            "start": start,
-            "end": end,
-            "risk": label,
-            "score": round(risk, 3),
-            "reasons": reasons
-        })
+        risk_spans.append(
+            {
+                "span": s,
+                "start": start,
+                "end": end,
+                "risk": label,
+                "score": round(risk, 3),
+                "reasons": reasons,
+            }
+        )
         idx += 1
 
     # Overall risk = mean of per-sentence scores (simple MVP)

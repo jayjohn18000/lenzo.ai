@@ -11,6 +11,7 @@ from backend.judge.config import settings
 
 logger = logging.getLogger(__name__)
 
+
 def _dedupe_preserve_order(items: List[str]) -> List[str]:
     seen = set()
     out: List[str] = []
@@ -22,59 +23,71 @@ def _dedupe_preserve_order(items: List[str]) -> List[str]:
 
 
 def _select_optimal_models(
-    requested_models: Optional[List[str]], 
-    mode: str = "balanced"
+    requested_models: Optional[List[str]], mode: str = "balanced"
 ) -> List[str]:
     """
     Select optimal models based on test results and mode
     """
     if requested_models:
         return requested_models
-    
+
     if mode == "speed":
-        return settings.SPEED_OPTIMIZED_MODELS[:settings.MAX_PARALLEL_FANOUT]
+        return settings.SPEED_OPTIMIZED_MODELS[: settings.MAX_PARALLEL_FANOUT]
     elif mode == "quality":
-        return settings.QUALITY_OPTIMIZED_MODELS[:settings.MAX_PARALLEL_FANOUT]
+        return settings.QUALITY_OPTIMIZED_MODELS[: settings.MAX_PARALLEL_FANOUT]
     elif mode == "cost":
-        return settings.COST_OPTIMIZED_MODELS[:settings.MAX_PARALLEL_FANOUT]
+        return settings.COST_OPTIMIZED_MODELS[: settings.MAX_PARALLEL_FANOUT]
     else:  # balanced
-        models = settings.DEFAULT_MODELS[:settings.MAX_PARALLEL_FANOUT]
-        
+        models = settings.DEFAULT_MODELS[: settings.MAX_PARALLEL_FANOUT]
+
         # Add model rotation if enabled
-        if settings.ENABLE_MODEL_ROTATION and len(settings.DEFAULT_MODELS) > settings.MAX_PARALLEL_FANOUT:
+        if (
+            settings.ENABLE_MODEL_ROTATION
+            and len(settings.DEFAULT_MODELS) > settings.MAX_PARALLEL_FANOUT
+        ):
             # Randomly select from available models to distribute load
             all_models = settings.DEFAULT_MODELS + settings.FALLBACK_MODELS
-            models = random.sample(all_models, min(settings.MAX_PARALLEL_FANOUT, len(all_models)))
-        
+            models = random.sample(
+                all_models, min(settings.MAX_PARALLEL_FANOUT, len(all_models))
+            )
+
         return models
 
 
 async def _gen_one_with_fallback(
-    model: str, 
-    prompt: str, 
+    model: str,
+    prompt: str,
     sem: asyncio.Semaphore,
     fallback_models: List[str],
-    trace_id: str
+    trace_id: str,
 ) -> Optional[Candidate]:
     """Generate with automatic fallback to backup models"""
     models_to_try = [model] + fallback_models
-    
+
     for attempt_model in models_to_try:
         async with sem:
             t0 = time.perf_counter()
             try:
-                logger.info(f"[{trace_id}] Attempting generation with model: {attempt_model}")
+                logger.info(
+                    f"[{trace_id}] Attempting generation with model: {attempt_model}"
+                )
                 text, meta = await llm_complete(model=attempt_model, prompt=prompt)
                 dt_ms = int((time.perf_counter() - t0) * 1000)
-                
-                logger.info(f"[{trace_id}] ✅ Success with {attempt_model}: {len(text)} chars in {dt_ms}ms")
-                
+
+                logger.info(
+                    f"[{trace_id}] ✅ Success with {attempt_model}: {len(text)} chars in {dt_ms}ms"
+                )
+
                 # Calculate estimated cost (you can refine these numbers based on actual pricing)
-                estimated_cost = _estimate_cost(attempt_model, meta.get("tokens_in", 0), meta.get("tokens_out", 0))
-                
+                estimated_cost = _estimate_cost(
+                    attempt_model, meta.get("tokens_in", 0), meta.get("tokens_out", 0)
+                )
+
                 # Determine performance tier
-                performance_tier = "fast" if dt_ms < 1000 else "medium" if dt_ms < 3000 else "slow"
-                
+                performance_tier = (
+                    "fast" if dt_ms < 1000 else "medium" if dt_ms < 3000 else "slow"
+                )
+
                 return Candidate(
                     text=text,
                     provider="openrouter",
@@ -88,12 +101,16 @@ async def _gen_one_with_fallback(
             except OpenRouterError as e:
                 logger.warning(f"[{trace_id}] ❌ Model {attempt_model} failed: {e}")
                 if attempt_model == models_to_try[-1]:  # Last attempt
-                    logger.error(f"[{trace_id}] All fallbacks exhausted for original model {model}")
+                    logger.error(
+                        f"[{trace_id}] All fallbacks exhausted for original model {model}"
+                    )
                 continue
             except Exception as e:
-                logger.error(f"[{trace_id}] Unexpected error for model {attempt_model}: {e}")
+                logger.error(
+                    f"[{trace_id}] Unexpected error for model {attempt_model}: {e}"
+                )
                 continue
-    
+
     return None
 
 
@@ -114,28 +131,27 @@ def _estimate_cost(model: str, tokens_in: int, tokens_out: int) -> float:
         "llama": {"input": 0.0002, "output": 0.0002},  # Default for Llama models
         "mistral": {"input": 0.00025, "output": 0.00025},  # Default for Mistral
     }
-    
+
     # Find matching cost profile
     costs = {"input": 0.001, "output": 0.001}  # Default costs
     for key in cost_map:
         if key in model.lower():
             costs = cost_map[key]
             break
-    
+
     # Calculate total cost
-    total_cost = (tokens_in * costs["input"] / 1000) + (tokens_out * costs["output"] / 1000)
+    total_cost = (tokens_in * costs["input"] / 1000) + (
+        tokens_out * costs["output"] / 1000
+    )
     return round(total_cost, 6)
 
 
 async def fanout_generate(
-    prompt: str, 
-    models: Optional[List[str]], 
-    trace_id: str,
-    mode: str = "balanced"
+    prompt: str, models: Optional[List[str]], trace_id: str, mode: str = "balanced"
 ) -> List[Candidate]:
     """
     Generate candidate answers with smart model selection, fallbacks, and metrics tracking.
-    
+
     Args:
         prompt: The user prompt
         models: Optional explicit model list
@@ -144,49 +160,57 @@ async def fanout_generate(
     """
     logger.info(f"[{trace_id}] 🚀 Starting fanout generation")
     logger.info(f"[{trace_id}] Mode: {mode}, Requested models: {models}")
-    
+
     # Select optimal models based on test results
     selected_models = _select_optimal_models(models, mode)
-    
+
     if not selected_models:
         logger.error(f"[{trace_id}] No models available for fanout generation")
         return []
-    
+
     selected_models = _dedupe_preserve_order(selected_models)
     logger.info(f"[{trace_id}] 🎯 Selected models: {selected_models}")
-    
+
     # Prepare fallback models for each primary model
-    fallback_models = [m for m in settings.FALLBACK_MODELS if m not in selected_models][:2]
-    
+    fallback_models = [m for m in settings.FALLBACK_MODELS if m not in selected_models][
+        :2
+    ]
+
     sem = asyncio.Semaphore(max(1, settings.MAX_PARALLEL_FANOUT))
-    
+
     # Create tasks with fallback support
     tasks = [
         asyncio.create_task(
             _gen_one_with_fallback(model, prompt, sem, fallback_models, trace_id)
-        ) 
+        )
         for model in selected_models
     ]
-    
+
     logger.info(f"[{trace_id}] 📡 Created {len(tasks)} generation tasks with fallbacks")
-    
+
     results = await asyncio.gather(*tasks, return_exceptions=False)
-    
+
     # Filter successful candidates and log metrics
     candidates: List[Candidate] = []
     for i, result in enumerate(results):
         if isinstance(result, Candidate):
             candidates.append(result)
-            logger.info(f"[{trace_id}] ✅ Candidate {i}: {result.model} -> {len(result.text)} chars in {result.gen_time_ms}ms (${result.estimated_cost:.4f})")
+            logger.info(
+                f"[{trace_id}] ✅ Candidate {i}: {result.model} -> {len(result.text)} chars in {result.gen_time_ms}ms (${result.estimated_cost:.4f})"
+            )
         else:
-            logger.warning(f"[{trace_id}] ❌ Failed candidate {i}: {selected_models[i] if i < len(selected_models) else 'unknown'}")
-    
+            logger.warning(
+                f"[{trace_id}] ❌ Failed candidate {i}: {selected_models[i] if i < len(selected_models) else 'unknown'}"
+            )
+
     # Log performance stats
     if candidates:
         avg_time = sum(c.gen_time_ms for c in candidates) / len(candidates)
         total_tokens = sum(c.tokens_in + c.tokens_out for c in candidates)
         total_cost = sum(c.estimated_cost or 0 for c in candidates)
-        logger.info(f"[{trace_id}] 📊 Performance: {len(candidates)}/{len(selected_models)} succeeded, avg {avg_time:.0f}ms, {total_tokens} total tokens, ${total_cost:.4f} estimated cost")
-    
+        logger.info(
+            f"[{trace_id}] 📊 Performance: {len(candidates)}/{len(selected_models)} succeeded, avg {avg_time:.0f}ms, {total_tokens} total tokens, ${total_cost:.4f} estimated cost"
+        )
+
     logger.info(f"[{trace_id}] 🎉 Returning {len(candidates)} successful candidates")
     return candidates

@@ -11,8 +11,7 @@ from typing import Generator
 
 # Database URL from environment or default to SQLite for development
 DATABASE_URL = os.getenv(
-    "DATABASE_URL", 
-    "sqlite:///./nextagi.db"  # SQLite fallback for local development
+    "DATABASE_URL", "sqlite:///./nextagi.db"  # SQLite fallback for local development
 )
 
 # For production PostgreSQL, use format: postgresql://user:password@localhost/dbname
@@ -20,12 +19,15 @@ DATABASE_URL = os.getenv(
 
 engine = create_engine(
     DATABASE_URL,
-    connect_args={"check_same_thread": False} if DATABASE_URL.startswith("sqlite") else {}
+    connect_args=(
+        {"check_same_thread": False} if DATABASE_URL.startswith("sqlite") else {}
+    ),
 )
 
 SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
 
 Base = declarative_base()
+
 
 def get_db() -> Generator:
     """Dependency to get database session"""
@@ -34,6 +36,7 @@ def get_db() -> Generator:
         yield db
     finally:
         db.close()
+
 
 def create_tables():
     """Create all tables in the database"""

@@ -29,6 +29,7 @@ logger = logging.getLogger(__name__)
 # -----------------------------------------------------
 class JobsBase(DeclarativeBase):
     """Dedicated Base for job persistence models."""
+
     pass
 
 
@@ -38,6 +39,7 @@ Base = JobsBase
 
 class JobStatus(str, Enum):
     """Lifecycle values must match Redis string values exactly."""
+
     PENDING = "pending"
     PROCESSING = "processing"
     COMPLETED = "completed"
@@ -53,6 +55,7 @@ class JobRecord(Base):  # type: ignore[misc]
     ORM table for persisted jobs (optional).
     If you don't persist to a DB, you can ignore this model.
     """
+
     __tablename__ = "jobs"
 
     # Identifiers & inputs
@@ -98,6 +101,7 @@ class JobRecord(Base):  # type: ignore[misc]
 @dataclass
 class QueryJob:
     """Job for processing query requests asynchronously."""
+
     request_id: str
     prompt: str
     mode: str = "balanced"

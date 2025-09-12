@@ -15,14 +15,14 @@ import re
 from typing import Dict, List, Tuple, Any
 from backend.judge.schemas import Candidate
 
-URL_RE = re.compile(r'https?://[^\s\)\]]+')
-BRACKET_CITE_RE = re.compile(r'\[(\d+)\]')
-YEAR_RE = re.compile(r'\b(19|20)\d{2}\b')
-NUMBER_RE = re.compile(r'\b\d[\d,]*(\.\d+)?\b')
+URL_RE = re.compile(r"https?://[^\s\)\]]+")
+BRACKET_CITE_RE = re.compile(r"\[(\d+)\]")
+YEAR_RE = re.compile(r"\b(19|20)\d{2}\b")
+NUMBER_RE = re.compile(r"\b\d[\d,]*(\.\d+)?\b")
 TEMPORAL_RE = re.compile(
-    r'\b(today|yesterday|recent(ly)?|last\s+(year|month|week)|this\s+(year|month|week)|'
-    r'january|february|march|april|may|june|july|august|september|october|november|december)\b',
-    re.IGNORECASE
+    r"\b(today|yesterday|recent(ly)?|last\s+(year|month|week)|this\s+(year|month|week)|"
+    r"january|february|march|april|may|june|july|august|september|october|november|december)\b",
+    re.IGNORECASE,
 )
 
 # Safety: don't create too many claims on verbose answers
@@ -32,7 +32,7 @@ MAX_CLAIMS = 24
 def _extract_sentences(text: str) -> List[Tuple[str, int, int]]:
     """Return [(sentence, start, end)] with simple split; preserves offsets."""
     # naive split on ., !, ? while keeping positions
-    parts: List[str] = re.split(r'(?<=[\.\!\?])\s+', text.strip())
+    parts: List[str] = re.split(r"(?<=[\.\!\?])\s+", text.strip())
     out: List[Tuple[str, int, int]] = []
     cursor = 0
     for p in parts:
@@ -72,12 +72,14 @@ def _verify_sentence(s: str) -> Tuple[str, List[Dict[str, Any]]]:
 
     if has_sources:
         return "Verified", sources
-    if (has_year or has_num or has_temp):
+    if has_year or has_num or has_temp:
         return "Failed", sources  # no sources, but factual-looking
     return "Weak", sources
 
 
-def _sort_by_risk(sentences: List[Tuple[str, int, int]], risks: Dict) -> List[Tuple[str, int, int]]:
+def _sort_by_risk(
+    sentences: List[Tuple[str, int, int]], risks: Dict
+) -> List[Tuple[str, int, int]]:
     """
     Use HDM-2 output to prioritize high->medium->low risk spans when truncating to MAX_CLAIMS.
     If risks is empty, preserve original order.
@@ -87,6 +89,7 @@ def _sort_by_risk(sentences: List[Tuple[str, int, int]], risks: Dict) -> List[Tu
 
     # Build an index from offset to risk label
     span_risks = risks["risk_spans"]
+
     def risk_label_for(start: int, end: int) -> str:
         # Find overlapping risk span (first match wins)
         for rs in span_risks:
@@ -99,13 +102,14 @@ def _sort_by_risk(sentences: List[Tuple[str, int, int]], risks: Dict) -> List[Tu
 
     priority = {"high": 0, "medium": 1, "low": 2}
     ranked = sorted(
-        sentences,
-        key=lambda x: (priority.get(risk_label_for(x[1], x[2]), 2), x[1])
+        sentences, key=lambda x: (priority.get(risk_label_for(x[1], x[2]), 2), x[1])
     )
     return ranked[:MAX_CLAIMS]
 
 
-async def verify_claims(candidate: Candidate, risks: Dict, trace_id: str) -> Dict[str, Any]:
+async def verify_claims(
+    candidate: Candidate, risks: Dict, trace_id: str
+) -> Dict[str, Any]:
     """
     Verify a candidate's claims using heuristics and (later) web/KB adapters.
     Returns:
@@ -137,13 +141,15 @@ async def verify_claims(candidate: Candidate, risks: Dict, trace_id: str) -> Dic
         elif status == "Failed":
             f += 1
 
-        evidence.append({
-            "claim_id": f"c{i}",
-            "text": s,
-            "status": status,
-            "sources": sources,
-            "notes": None
-        })
+        evidence.append(
+            {
+                "claim_id": f"c{i}",
+                "text": s,
+                "status": status,
+                "sources": sources,
+                "notes": None,
+            }
+        )
 
     total = len(prioritized)
     stats = {

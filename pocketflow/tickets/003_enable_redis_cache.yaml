@@ -1,0 +1,10 @@
+type: enable_cache
+title: "Enable Redis caching with TTL + basic metrics"
+params:
+  ttl_seconds: 600
+acceptance:
+  - ENABLE_CACHING default True in settings
+  - CACHE_TTL available from env or default
+  - Identical second request hits cache (lower latency)
+notes:
+  - Adds cache key helper + setex in runner

@@ -43,12 +43,19 @@ def init_dependencies(
     _redis_client = redis_client
     _db_session_factory = db_session_factory
 
-    _job_manager = JobManager(redis_client=_redis_client, db_session_factory=_db_session_factory)
-    logger.info("Dependencies initialized: redis=%s db_session_factory=%s", bool(_redis_client), bool(_db_session_factory))
+    _job_manager = JobManager(
+        redis_client=_redis_client, db_session_factory=_db_session_factory
+    )
+    logger.info(
+        "Dependencies initialized: redis=%s db_session_factory=%s",
+        bool(_redis_client),
+        bool(_db_session_factory),
+    )
     return _job_manager
 
 
 # ---------- FastAPI dependencies ----------
+
 
 def get_job_manager() -> JobManager:
     """
@@ -84,6 +91,7 @@ def get_db_session() -> Generator[Session, None, None]:
 
 
 # ---------- Accessors for non-FastAPI code ----------
+
 
 def get_redis_client() -> redis.Redis:
     if _redis_client is None:

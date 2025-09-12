@@ -42,7 +42,9 @@ from backend.judge.steps.enhanced_scoring import EnhancedScorer
 # Job system imports
 from backend.jobs.models import Base as JobBase
 from backend.dependencies import init_dependencies
-from backend.jobs.worker import QueryWorker  # Worker is instantiated from JobManager inside deps
+from backend.jobs.worker import (
+    QueryWorker,
+)  # Worker is instantiated from JobManager inside deps
 
 # Additional integrations
 from backend.judge.utils.cache import get_cache
@@ -79,13 +81,17 @@ async def lifespan(app: FastAPI):
     # 1) Database init
     try:
         engine = create_engine(settings.DATABASE_URL, pool_pre_ping=True, future=True)
-        session_factory = sessionmaker(bind=engine, autoflush=False, autocommit=False, future=True)
+        session_factory = sessionmaker(
+            bind=engine, autoflush=False, autocommit=False, future=True
+        )
 
         # Create tables for all used Bases (idempotent)
         AuthBase.metadata.create_all(bind=engine)
         JobBase.metadata.create_all(bind=engine)
         try:
-            AnalyticsBase.metadata.create_all(bind=engine)  # optional analytics tables, if present
+            AnalyticsBase.metadata.create_all(
+                bind=engine
+            )  # optional analytics tables, if present
             logger.info("✅ Analytics tables ensured")
         except Exception as e:
             logger.warning(f"⚠️ Skipping analytics tables creation: {e}")
@@ -136,7 +142,9 @@ async def lifespan(app: FastAPI):
                 logger.info("✅ Background worker started in-process")
                 asyncio.create_task(monitor_worker_health(worker_task))
             else:
-                logger.info("ℹ️ RUN_WORKER_IN_PROCESS is False — not starting in-process worker")
+                logger.info(
+                    "ℹ️ RUN_WORKER_IN_PROCESS is False — not starting in-process worker"
+                )
 
         except Exception as e:
             logger.error(f"❌ Job system initialization failed: {e}")
@@ -173,7 +181,9 @@ async def lifespan(app: FastAPI):
     ]
     configured_keys = sum(1 for _, v in api_key_checks if v)
     for key_name, key_value in api_key_checks:
-        logger.info(f"{'✅' if key_value else '⚠️'} {key_name} {'configured' if key_value else 'not configured'}")
+        logger.info(
+            f"{'✅' if key_value else '⚠️'} {key_name} {'configured' if key_value else 'not configured'}"
+        )
     logger.info(f"✅ API Keys: {configured_keys}/{len(api_key_checks)} configured")
 
     # 7) Startup health check (non-fatal)
@@ -326,19 +336,25 @@ app = FastAPI(
 app.add_middleware(DataValidationMiddleware)
 app.add_middleware(
     TrustedHostMiddleware,
-    allowed_hosts=["*"] if settings.DEBUG else ["nextagi.com", "*.nextagi.com", "localhost", "127.0.0.1"],
+    allowed_hosts=(
+        ["*"]
+        if settings.DEBUG
+        else ["nextagi.com", "*.nextagi.com", "localhost", "127.0.0.1"]
+    ),
 )
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=[
-        "http://localhost:3000",
-        "http://127.0.0.1:3000",
-        "http://localhost:3001",
-        "https://nextagi.com",
-        "https://*.nextagi.com",
-    ]
-    if not settings.DEBUG
-    else ["*"],
+    allow_origins=(
+        [
+            "http://localhost:3000",
+            "http://127.0.0.1:3000",
+            "http://localhost:3001",
+            "https://nextagi.com",
+            "https://*.nextagi.com",
+        ]
+        if not settings.DEBUG
+        else ["*"]
+    ),
     allow_credentials=True,
     allow_methods=["GET", "POST", "PUT", "DELETE", "OPTIONS"],
     allow_headers=["*"],
@@ -369,7 +385,9 @@ async def enhanced_request_logging(request, call_next):
             f"[{request_id[:8]}] - {response.status_code} - {process_time:.3f}s"
         )
         if process_time > 5.0:
-            logger.warning(f"🐌 Slow request: {process_time:.3f}s for {request.url.path}")
+            logger.warning(
+                f"🐌 Slow request: {process_time:.3f}s for {request.url.path}"
+            )
         return response
     except Exception as e:
         process_time = time.time() - start_time
@@ -389,9 +407,15 @@ app.include_router(stats_router, tags=["Statistics"])
 @app.get("/health", response_model=HealthResponse, tags=["Health"])
 async def enhanced_health_check():
     health_data = await perform_startup_health_check()
-    health_data["uptime_seconds"] = time.time() - app.state.start_time if hasattr(app.state, "start_time") else 0
-    health_data["worker_status"] = "running" if worker_task and not worker_task.done() else "stopped"
-    available_models = len(settings.DEFAULT_MODELS) if settings.OPENROUTER_API_KEY else 0
+    health_data["uptime_seconds"] = (
+        time.time() - app.state.start_time if hasattr(app.state, "start_time") else 0
+    )
+    health_data["worker_status"] = (
+        "running" if worker_task and not worker_task.done() else "stopped"
+    )
+    available_models = (
+        len(settings.DEFAULT_MODELS) if settings.OPENROUTER_API_KEY else 0
+    )
     health_data["available_models"] = available_models
 
     return HealthResponse(
@@ -425,11 +449,17 @@ async def detailed_health_check():
 
 # ===== Core routing =====
 @app.post("/route", response_model=RouteResponse, tags=["Core"])
-async def enhanced_route(req: RouteRequest, background_tasks: BackgroundTasks, api_key_info: dict = Depends(verify_api_key)):
+async def enhanced_route(
+    req: RouteRequest,
+    background_tasks: BackgroundTasks,
+    api_key_info: dict = Depends(verify_api_key),
+):
     trace_id = new_trace_id()
     start_time = time.perf_counter()
 
-    logger.info(f"[{trace_id}] Enhanced route request from user {api_key_info['user_id']}")
+    logger.info(
+        f"[{trace_id}] Enhanced route request from user {api_key_info['user_id']}"
+    )
     logger.info(f"[{trace_id}] Prompt: {req.prompt[:100]}...")
 
     try:
@@ -438,23 +468,33 @@ async def enhanced_route(req: RouteRequest, background_tasks: BackgroundTasks, a
             try:
                 selected = model_selector.select_models(
                     req.prompt,
-                    getattr(model_selector.SelectionMode, req.options.model_selection_mode.upper()),
+                    getattr(
+                        model_selector.SelectionMode,
+                        req.options.model_selection_mode.upper(),
+                    ),
                     max_models=4,
                 )
                 req.options.models = selected
                 logger.info(f"[{trace_id}] Smart model selection: {selected}")
             except Exception as e:
-                logger.warning(f"[{trace_id}] Model selection failed, using defaults: {e}")
+                logger.warning(
+                    f"[{trace_id}] Model selection failed, using defaults: {e}"
+                )
                 req.options.models = settings.DEFAULT_MODELS[:3]
 
         pipeline_id, decision_reason = decide_pipeline(req)
-        logger.info(f"[{trace_id}] Pipeline selected: {pipeline_id} ({decision_reason})")
+        logger.info(
+            f"[{trace_id}] Pipeline selected: {pipeline_id} ({decision_reason})"
+        )
 
         # Cache → run pipeline
         try:
             if cache_instance:
                 cached = await cache_instance.get(
-                    req.prompt, req.options.models, req.expected_traits, req.options.model_selection_mode
+                    req.prompt,
+                    req.options.models,
+                    req.expected_traits,
+                    req.options.model_selection_mode,
                 )
                 if cached:
                     logger.info(f"[{trace_id}] Returning cached result")
@@ -466,7 +506,9 @@ async def enhanced_route(req: RouteRequest, background_tasks: BackgroundTasks, a
 
             # Enhanced scorer if needed
             if pipeline_id == "judge" and result.get("confidence", 0) < 0.9:
-                logger.info(f"[{trace_id}] Applying enhanced scoring for low confidence result")
+                logger.info(
+                    f"[{trace_id}] Applying enhanced scoring for low confidence result"
+                )
                 try:
                     improved = enhanced_scorer.enhance_confidence(result)
                     result.update(improved)
@@ -485,7 +527,10 @@ async def enhanced_route(req: RouteRequest, background_tasks: BackgroundTasks, a
 
         except Exception as pipeline_error:
             logger.error(f"[{trace_id}] Pipeline execution failed: {pipeline_error}")
-            raise HTTPException(status_code=500, detail=f"Pipeline processing failed: {str(pipeline_error)}")
+            raise HTTPException(
+                status_code=500,
+                detail=f"Pipeline processing failed: {str(pipeline_error)}",
+            )
 
         result.setdefault("citations", [])
         result.setdefault("models_attempted", req.options.models or [])
@@ -503,7 +548,9 @@ async def enhanced_route(req: RouteRequest, background_tasks: BackgroundTasks, a
                 result["confidence"],
             )
 
-        background_tasks.add_task(track_usage_analytics, api_key_info, req, result, response_time_ms)
+        background_tasks.add_task(
+            track_usage_analytics, api_key_info, req, result, response_time_ms
+        )
 
         enhanced_result = RouteResponse(
             pipeline_id=pipeline_id,
@@ -520,7 +567,9 @@ async def enhanced_route(req: RouteRequest, background_tasks: BackgroundTasks, a
             trace_id=trace_id,
         )
 
-        logger.info(f"[{trace_id}] Request completed successfully in {response_time_ms}ms")
+        logger.info(
+            f"[{trace_id}] Request completed successfully in {response_time_ms}ms"
+        )
         return enhanced_result
 
     except HTTPException:
@@ -536,7 +585,9 @@ async def enhanced_route(req: RouteRequest, background_tasks: BackgroundTasks, a
                     int((time.perf_counter() - start_time) * 1000),
                     0.0,
                 )
-        raise HTTPException(status_code=500, detail=f"Request processing failed: {str(e)}")
+        raise HTTPException(
+            status_code=500, detail=f"Request processing failed: {str(e)}"
+        )
 
 
 # ===== Admin =====
@@ -550,9 +601,15 @@ async def admin_stats(api_key_info: dict = Depends(verify_api_key)):
         stats = {
             "system_health": health_data,
             "model_performance": model_selector.performance_history,
-            "cache_metrics": await cache_instance.get_metrics() if cache_instance else {},
+            "cache_metrics": (
+                await cache_instance.get_metrics() if cache_instance else {}
+            ),
             "job_queue_stats": await get_job_queue_stats() if job_manager else {},
-            "uptime_seconds": time.time() - app.state.start_time if hasattr(app.state, "start_time") else 0,
+            "uptime_seconds": (
+                time.time() - app.state.start_time
+                if hasattr(app.state, "start_time")
+                else 0
+            ),
             "active_connections": "Would query from connection pool",
             "total_requests_today": "Would query from database",
             "average_response_time": "Would calculate from recent requests",
@@ -584,7 +641,12 @@ async def dev_route(req: RouteRequest, background_tasks: BackgroundTasks):
         raise HTTPException(status_code=404, detail="Not found")
     logger.info("🧪 Using development route (no auth)")
 
-    mock_api_key_info = {"user_id": 1, "user_email": "dev@localhost", "subscription_tier": "professional", "api_key_id": 1}
+    mock_api_key_info = {
+        "user_id": 1,
+        "user_email": "dev@localhost",
+        "subscription_tier": "professional",
+        "api_key_id": 1,
+    }
     return await enhanced_route(req, background_tasks, mock_api_key_info)
 
 
@@ -600,7 +662,9 @@ async def dev_health():
         "components": {
             "redis": "connected" if redis_client else "disconnected",
             "job_manager": "active" if job_manager else "inactive",
-            "worker": "running" if worker_task and not worker_task.done() else "stopped",
+            "worker": (
+                "running" if worker_task and not worker_task.done() else "stopped"
+            ),
         },
     }
 
@@ -622,7 +686,9 @@ async def dev_query(req: dict):
             "reasoning": "This is a development mock response to test connectivity.",
             "system_status": {
                 "redis": "connected" if redis_client else "disconnected",
-                "worker": "running" if worker_task and not worker_task.done() else "stopped",
+                "worker": (
+                    "running" if worker_task and not worker_task.done() else "stopped"
+                ),
                 "cache": "active" if cache_instance else "inactive",
             },
         }
@@ -646,9 +712,16 @@ async def debug_routes():
     routes = []
     for route in app.routes:
         if hasattr(route, "path") and hasattr(route, "methods"):
-            info = {"path": route.path, "methods": list(route.methods) if route.methods else [], "name": getattr(route, "name", "unnamed"), "tags": getattr(route, "tags", [])}
+            info = {
+                "path": route.path,
+                "methods": list(route.methods) if route.methods else [],
+                "name": getattr(route, "name", "unnamed"),
+                "tags": getattr(route, "tags", []),
+            }
             if hasattr(route, "endpoint") and hasattr(route.endpoint, "__doc__"):
-                info["description"] = route.endpoint.__doc__.strip() if route.endpoint.__doc__ else None
+                info["description"] = (
+                    route.endpoint.__doc__.strip() if route.endpoint.__doc__ else None
+                )
             routes.append(info)
 
     return {
@@ -659,7 +732,9 @@ async def debug_routes():
             "version": "2.0.0",
             "components": {
                 "redis": "connected" if redis_client else "disconnected",
-                "worker": "running" if worker_task and not worker_task.done() else "stopped",
+                "worker": (
+                    "running" if worker_task and not worker_task.done() else "stopped"
+                ),
                 "cache": "active" if cache_instance else "inactive",
             },
         },
@@ -668,7 +743,12 @@ async def debug_routes():
 
 @app.get("/test/ping", tags=["Development"])
 async def test_ping():
-    return {"message": "pong", "timestamp": time.time(), "server": "NextAGI v2.0.0", "status": "operational"}
+    return {
+        "message": "pong",
+        "timestamp": time.time(),
+        "server": "NextAGI v2.0.0",
+        "status": "operational",
+    }
 
 
 @app.post("/api/simple-query", tags=["Development"])
@@ -686,7 +766,11 @@ async def simple_query_without_auth(request: dict):
             "system_health": "operational",
         }
     except Exception as e:
-        return {"error": str(e), "request_id": f"error_{int(time.time())}", "system_health": "error"}
+        return {
+            "error": str(e),
+            "request_id": f"error_{int(time.time())}",
+            "system_health": "error",
+        }
 
 
 @app.get("/debug/system", tags=["Development"])
@@ -706,7 +790,9 @@ async def debug_system():
         },
         "performance": {
             "model_count": len(model_selector.performance_history),
-            "cache_metrics": await cache_instance.get_metrics() if cache_instance else {},
+            "cache_metrics": (
+                await cache_instance.get_metrics() if cache_instance else {}
+            ),
         },
     }
     return debug_info
@@ -719,9 +805,23 @@ async def root():
         "message": "Welcome to NextAGI - Advanced Multi-LLM Truth Router",
         "version": "2.0.0",
         "status": "operational",
-        "documentation": {"docs_url": "/docs", "redoc_url": "/redoc", "health_check": "/health"},
-        "api_endpoints": {"core": "/route", "enhanced_query": "/api/v1/query", "statistics": "/api/v1/usage", "admin": "/admin/stats"},
-        "development_endpoints": {"available_in_debug": settings.DEBUG, "dev_query": "/dev/query", "test_ping": "/test/ping", "debug_routes": "/debug/routes"},
+        "documentation": {
+            "docs_url": "/docs",
+            "redoc_url": "/redoc",
+            "health_check": "/health",
+        },
+        "api_endpoints": {
+            "core": "/route",
+            "enhanced_query": "/api/v1/query",
+            "statistics": "/api/v1/usage",
+            "admin": "/admin/stats",
+        },
+        "development_endpoints": {
+            "available_in_debug": settings.DEBUG,
+            "dev_query": "/dev/query",
+            "test_ping": "/test/ping",
+            "debug_routes": "/debug/routes",
+        },
         "system_info": {
             "components_active": {
                 "redis": bool(redis_client),
@@ -754,7 +854,9 @@ async def http_exception_handler(request, exc):
     }
     if hasattr(request.state, "request_id"):
         error_detail["request_id"] = request.state.request_id
-    logger.warning(f"HTTP {exc.status_code}: {exc.detail} on {request.method} {request.url.path}")
+    logger.warning(
+        f"HTTP {exc.status_code}: {exc.detail} on {request.method} {request.url.path}"
+    )
     return JSONResponse(status_code=exc.status_code, content=error_detail)
 
 
@@ -770,15 +872,22 @@ async def general_exception_handler(request, exc):
         "method": request.method,
     }
     if settings.DEBUG:
-        error_detail["debug_info"] = {"exception_type": type(exc).__name__, "exception_message": str(exc)}
-    logger.error(f"💥 Unhandled exception [{request_id}]: {type(exc).__name__}: {str(exc)} on {request.method} {request.url.path}")
+        error_detail["debug_info"] = {
+            "exception_type": type(exc).__name__,
+            "exception_message": str(exc),
+        }
+    logger.error(
+        f"💥 Unhandled exception [{request_id}]: {type(exc).__name__}: {str(exc)} on {request.method} {request.url.path}"
+    )
     return JSONResponse(status_code=500, content=error_detail)
 
 
 # ===== Background tasks =====
 async def track_usage_analytics(api_key_info, request, result, response_time):
     try:
-        logger.debug(f"Tracking usage for user {api_key_info['user_id']}: {response_time}ms")
+        logger.debug(
+            f"Tracking usage for user {api_key_info['user_id']}: {response_time}ms"
+        )
     except Exception as e:
         logger.error(f"Usage tracking failed: {e}")
 

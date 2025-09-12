@@ -34,7 +34,9 @@ class Settings(BaseSettings):
 
     # Optional: queue and pub/sub names for jobs (safe defaults)
     REDIS_JOB_QUEUE: str = Field(default="jobs:queue", env="REDIS_JOB_QUEUE")
-    REDIS_RESULTS_CHANNEL: str = Field(default="jobs:results", env="REDIS_RESULTS_CHANNEL")
+    REDIS_RESULTS_CHANNEL: str = Field(
+        default="jobs:results", env="REDIS_RESULTS_CHANNEL"
+    )
 
     # Toggle: run the worker inside the API process (lifespan) vs. separate process
     RUN_WORKER_IN_PROCESS: bool = Field(default=False, env="RUN_WORKER_IN_PROCESS")
@@ -47,7 +49,9 @@ class Settings(BaseSettings):
     OPENAI_API_KEY: SecretStr = Field(default=SecretStr(""), env="OPENAI_API_KEY")
 
     # Security
-    SECRET_KEY: str = Field(default="dev-secret-key-change-in-production", env="SECRET_KEY")
+    SECRET_KEY: str = Field(
+        default="dev-secret-key-change-in-production", env="SECRET_KEY"
+    )
 
     # Performance
     ENABLE_CACHING: bool = Field(default=False, env="ENABLE_CACHING")

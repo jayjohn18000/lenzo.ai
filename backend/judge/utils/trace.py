@@ -7,9 +7,11 @@ import uuid
 from typing import Optional
 import time
 
+
 def new_trace_id() -> str:
     """Generate a new unique trace ID for request tracking"""
     return str(uuid.uuid4())
+
 
 def format_trace_log(trace_id: str, message: str, **kwargs) -> str:
     """Format a log message with trace ID and optional metadata"""

@@ -10,10 +10,11 @@ from backend.judge.schemas import Candidate
 
 logger = logging.getLogger(__name__)
 
+
 def rank_and_select(
     candidates: List[Candidate],
     judge_scores: Dict[int, Dict[str, float]],
-    consensus_result: Tuple[int, float]
+    consensus_result: Tuple[int, float],
 ) -> Tuple[Candidate, Dict[str, float], float]:
     """
     Final selection and confidence calculation
@@ -21,34 +22,35 @@ def rank_and_select(
     """
     if not candidates:
         raise ValueError("No candidates provided")
-    
+
     winner_idx, consensus_score = consensus_result
-    
+
     if winner_idx >= len(candidates):
-        raise ValueError(f"Winner index {winner_idx} out of range for {len(candidates)} candidates")
-    
+        raise ValueError(
+            f"Winner index {winner_idx} out of range for {len(candidates)} candidates"
+        )
+
     winner_candidate = candidates[winner_idx]
     winner_trait_scores = judge_scores.get(winner_idx, {})
-    
+
     # Calculate final confidence
     confidence = _calculate_final_confidence(
-        winner_candidate, 
-        winner_trait_scores, 
-        consensus_score,
-        candidates,
-        judge_scores
+        winner_candidate, winner_trait_scores, consensus_score, candidates, judge_scores
     )
-    
-    logger.info(f"Selected winner: {winner_candidate.model} with confidence {confidence:.3f}")
-    
+
+    logger.info(
+        f"Selected winner: {winner_candidate.model} with confidence {confidence:.3f}"
+    )
+
     return winner_candidate, winner_trait_scores, confidence
+
 
 def _calculate_final_confidence(
     winner: Candidate,
     winner_scores: Dict[str, float],
     consensus_score: float,
     all_candidates: List[Candidate],
-    all_scores: Dict[int, Dict[str, float]]
+    all_scores: Dict[int, Dict[str, float]],
 ) -> float:
     """
     Calculate final confidence based on multiple factors.
@@ -56,10 +58,10 @@ def _calculate_final_confidence(
     """
     # Start with the consensus score as the primary confidence
     base_confidence = consensus_score
-    
+
     # Apply modifiers instead of averaging everything equally
     confidence_modifiers = []
-    
+
     # 1. Winner margin modifier (±10% max)
     if len(all_candidates) > 1:
         all_averages = []
@@ -67,7 +69,7 @@ def _calculate_final_confidence(
             if scores:
                 avg = mean(scores.values())
                 all_averages.append(avg)
-        
+
         if len(all_averages) >= 2:
             all_averages.sort(reverse=True)
             margin = all_averages[0] - all_averages[1]
@@ -77,7 +79,7 @@ def _calculate_final_confidence(
                 confidence_modifiers.append(0.1)  # +10% for clear winner
             elif margin < 0.05:
                 confidence_modifiers.append(-0.1)  # -10% for very close race
-    
+
     # 2. Response quality modifier (±5% max)
     if winner.text:
         text_length = len(winner.text)
@@ -87,23 +89,26 @@ def _calculate_final_confidence(
             confidence_modifiers.append(-0.1)  # Too short
         elif text_length > 5000:
             confidence_modifiers.append(-0.05)  # Too verbose
-    
+
     # 3. Model reliability modifier (±5% max)
     model_reliability = _get_model_reliability(winner.model)
     if model_reliability >= 0.9:
         confidence_modifiers.append(0.05)  # Premium model bonus
     elif model_reliability < 0.8:
         confidence_modifiers.append(-0.05)  # Lower tier model penalty
-    
+
     # Apply modifiers to base confidence
     modifier_sum = sum(confidence_modifiers)
     final_confidence = base_confidence + modifier_sum
-    
+
     # Log the calculation for debugging
-    logger.debug(f"Confidence calculation: base={base_confidence:.3f}, modifiers={modifier_sum:.3f}, final={final_confidence:.3f}")
-    
+    logger.debug(
+        f"Confidence calculation: base={base_confidence:.3f}, modifiers={modifier_sum:.3f}, final={final_confidence:.3f}"
+    )
+
     # Ensure bounds [0.0, 1.0]
     return max(0.0, min(1.0, final_confidence))
+
 
 def _get_model_reliability(model_name: str) -> float:
     """
@@ -124,13 +129,13 @@ def _get_model_reliability(model_name: str) -> float:
         "mistralai/mistral-medium": 0.80,
         "mistralai/mistral-small": 0.78,
     }
-    
+
     # Extract base model name for matching
     base_model = model_name.lower()
-    
+
     for model_pattern, reliability in reliability_map.items():
         if model_pattern.lower() in base_model:
             return reliability
-    
+
     # Default reliability for unknown models
     return 0.75

@@ -31,6 +31,7 @@ from sqlalchemy.orm import (
 # -----------------------------------------------------
 class AnalyticsBase(DeclarativeBase):
     """Dedicated Base for analytics persistence models."""
+
     pass
 
 
@@ -40,12 +41,15 @@ Base = AnalyticsBase
 
 class QueryRequest(Base):
     """Store each query request for analytics."""
+
     __tablename__ = "query_requests"
 
     id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
     request_id: Mapped[str] = mapped_column(String(36), unique=True, index=True)
     prompt: Mapped[str] = mapped_column(Text, nullable=False)
-    mode: Mapped[Optional[str]] = mapped_column(String(20))  # speed, quality, balanced, cost
+    mode: Mapped[Optional[str]] = mapped_column(
+        String(20)
+    )  # speed, quality, balanced, cost
     max_models: Mapped[Optional[int]] = mapped_column(Integer)
     created_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow)
     response_time_ms: Mapped[Optional[int]] = mapped_column(Integer)
@@ -53,7 +57,9 @@ class QueryRequest(Base):
     total_cost: Mapped[Optional[float]] = mapped_column(Float)
     winner_confidence: Mapped[Optional[float]] = mapped_column(Float)
     winner_model: Mapped[Optional[str]] = mapped_column(String(100))
-    models_used_json: Mapped[Optional[str]] = mapped_column(Text)  # JSON array of model names
+    models_used_json: Mapped[Optional[str]] = mapped_column(
+        Text
+    )  # JSON array of model names
 
     # Relationships
     model_responses: Mapped[List["ModelResponse"]] = relationship(
@@ -73,10 +79,13 @@ class QueryRequest(Base):
 
 class ModelResponse(Base):
     """Store individual model responses for analysis."""
+
     __tablename__ = "model_responses"
 
     id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
-    request_id: Mapped[str] = mapped_column(String(36), ForeignKey("query_requests.request_id"))
+    request_id: Mapped[str] = mapped_column(
+        String(36), ForeignKey("query_requests.request_id")
+    )
     model_name: Mapped[Optional[str]] = mapped_column(String(100))
     response_text: Mapped[Optional[str]] = mapped_column(Text)
     confidence_score: Mapped[Optional[float]] = mapped_column(Float)  # Must be 0-1
@@ -96,7 +105,9 @@ class ModelResponse(Base):
     trait_scores_json: Mapped[Optional[str]] = mapped_column(Text)
 
     # Relationship
-    query_request: Mapped["QueryRequest"] = relationship(back_populates="model_responses")
+    query_request: Mapped["QueryRequest"] = relationship(
+        back_populates="model_responses"
+    )
 
     @property
     def trait_scores(self) -> Dict[str, Any]:

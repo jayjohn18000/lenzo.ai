@@ -40,7 +40,9 @@ class QueryWorker:
         while self.running:
             try:
                 # With decode_responses=True, returns [list_name, job_id] (both str) or None
-                popped = await self.job_manager.redis.brpop("query_jobs:pending", timeout=5)
+                popped = await self.job_manager.redis.brpop(
+                    "query_jobs:pending", timeout=5
+                )
                 if not popped:
                     continue
 
@@ -48,7 +50,9 @@ class QueryWorker:
 
                 # Skip if cancelled before we pick it up
                 if await self._is_cancelled(job_id):
-                    logger.info(f"Worker {self.worker_id}: job {job_id} already cancelled, skipping")
+                    logger.info(
+                        f"Worker {self.worker_id}: job {job_id} already cancelled, skipping"
+                    )
                     continue
 
                 await self.process_job(job_id)
@@ -69,7 +73,10 @@ class QueryWorker:
         job_obj = await self._load_job(job_id)
         if not job_obj:
             logger.error(f"Worker {self.worker_id}: job {job_id} not found in cache/DB")
-            await self._set_status(job_id, {"id": job_id, "status": JobStatus.FAILED.value, "error": "not_found"})
+            await self._set_status(
+                job_id,
+                {"id": job_id, "status": JobStatus.FAILED.value, "error": "not_found"},
+            )
             await self.job_manager.redis.publish("jobs:failed", job_id)
             return
 
@@ -78,12 +85,18 @@ class QueryWorker:
         # Mark as processing
         await self._set_status(
             job_id,
-            {"id": job_id, "status": JobStatus.PROCESSING.value, "started_at": started_at},
+            {
+                "id": job_id,
+                "status": JobStatus.PROCESSING.value,
+                "started_at": started_at,
+            },
         )
 
         # Respect cancellation just before execution
         if await self._is_cancelled(job_id):
-            await self._set_status(job_id, {"id": job_id, "status": JobStatus.CANCELLED.value})
+            await self._set_status(
+                job_id, {"id": job_id, "status": JobStatus.CANCELLED.value}
+            )
             logger.info(f"Worker {self.worker_id}: job {job_id} cancelled before run")
             return
 
@@ -109,7 +122,9 @@ class QueryWorker:
             if self.job_manager.db_session_factory:
                 try:
                     with self.job_manager.db_session_factory() as session:  # type: ignore[call-arg]
-                        self._update_db_success(session, job_id, result, started_at, completed_at)
+                        self._update_db_success(
+                            session, job_id, result, started_at, completed_at
+                        )
                 except Exception as db_err:
                     logger.warning(f"DB success update failed for {job_id}: {db_err}")
 
@@ -131,7 +146,9 @@ class QueryWorker:
             if self.job_manager.db_session_factory:
                 try:
                     with self.job_manager.db_session_factory() as session:  # type: ignore[call-arg]
-                        self._update_db_failure(session, job_id, str(e), started_at, completed_at)
+                        self._update_db_failure(
+                            session, job_id, str(e), started_at, completed_at
+                        )
                 except Exception as db_err:
                     logger.warning(f"DB failure update failed for {job_id}: {db_err}")
 
@@ -174,7 +191,12 @@ class QueryWorker:
         return None
 
     def _update_db_success(
-        self, session: Session, job_id: str, result: dict, started_at_iso: str, completed_at_iso: str
+        self,
+        session: Session,
+        job_id: str,
+        result: dict,
+        started_at_iso: str,
+        completed_at_iso: str,
     ) -> None:
         rec = session.get(JobRecord, job_id)
         if not rec:
@@ -183,7 +205,9 @@ class QueryWorker:
         rec.result = result
         try:
             started = datetime.fromisoformat(started_at_iso) if started_at_iso else None
-            completed = datetime.fromisoformat(completed_at_iso) if completed_at_iso else None
+            completed = (
+                datetime.fromisoformat(completed_at_iso) if completed_at_iso else None
+            )
         except Exception:
             started = completed = None
         rec.started_at = started or rec.started_at
@@ -194,7 +218,14 @@ class QueryWorker:
         session.add(rec)
         session.commit()
 
-    def _update_db_failure(self, session: Session, job_id: str, error: str, started_at_iso: str, completed_at_iso: str) -> None:
+    def _update_db_failure(
+        self,
+        session: Session,
+        job_id: str,
+        error: str,
+        started_at_iso: str,
+        completed_at_iso: str,
+    ) -> None:
         rec = session.get(JobRecord, job_id)
         if not rec:
             return
@@ -202,7 +233,9 @@ class QueryWorker:
         rec.error = error
         try:
             started = datetime.fromisoformat(started_at_iso) if started_at_iso else None
-            completed = datetime.fromisoformat(completed_at_iso) if completed_at_iso else None
+            completed = (
+                datetime.fromisoformat(completed_at_iso) if completed_at_iso else None
+            )
         except Exception:
             started = completed = None
         rec.started_at = started or rec.started_at

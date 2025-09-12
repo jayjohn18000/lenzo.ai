@@ -22,7 +22,11 @@ class JobManager:
     and queueing for background workers.
     """
 
-    def __init__(self, redis_client: redis.Redis, db_session_factory: Optional[Callable[[], Session]]):
+    def __init__(
+        self,
+        redis_client: redis.Redis,
+        db_session_factory: Optional[Callable[[], Session]],
+    ):
         self.redis = redis_client
         self.db_session_factory = db_session_factory
         # kept for backwards-compatibility if something uses it
