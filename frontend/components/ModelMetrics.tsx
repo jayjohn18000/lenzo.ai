@@ -66,9 +66,9 @@ export function ModelMetricsCard({ metrics, loading, winner }: ModelMetricsCardP
                 <div>
                   <div className="flex justify-between mb-1">
                     <span className="text-muted-foreground">Confidence</span>
-                    <span className="font-medium">{safePercentage(confidence, { expectsFraction: true })}</span>
+                    <span className="font-medium">{safePercentage(metric.confidence, { expectsFraction: true })}</span>
                   </div>
-                  <Progress value={confidence * 100} className="h-2" />
+                  <Progress value={metric.confidence * 100} className="h-2" />
                 </div>
 
                 <div>

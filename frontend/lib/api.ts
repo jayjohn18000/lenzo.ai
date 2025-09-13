@@ -107,7 +107,12 @@ export class APIClient {
     
     while (attempts < maxAttempts) {
       try {
-        const response = await fetch(`${API_BASE_URL}/api/v1/jobs/${jobId}`);
+        const response = await fetch(`${API_BASE_URL}/api/v1/jobs/${jobId}`, {
+          headers: {
+            'Authorization': `Bearer ${API_KEY}`,
+            'Content-Type': 'application/json'
+          }
+        });
         const data = await response.json();
         
         if (response.status === 200) {

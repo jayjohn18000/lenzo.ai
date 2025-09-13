@@ -80,9 +80,9 @@ export default function Dashboard() {
   const convertToDisplayMetrics = (metrics: ModelMetrics[]): DisplayModelMetrics[] => {
     return metrics.map(metric => ({
       model: metric.model,
-      score: Math.round(metric.confidence * 100), // Convert 0-1 to 0-100
+      score: metric.confidence, // Keep as 0-1 fraction for safePercentage
       responseTimeMs: metric.response_time_ms,
-      reliabilityPct: Math.round(metric.reliability_score * 100), // Convert 0-1 to 0-100
+      reliabilityPct: metric.reliability_score, // Keep as 0-1 fraction for safePercentage
       cost: metric.cost,
       isWinner: metric.is_winner,
       error: metric.error
