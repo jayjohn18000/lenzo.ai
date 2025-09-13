@@ -537,10 +537,15 @@ async def get_job_status(
 
     # Compare to Enum .value to avoid mismatches
     if st == JobStatus.COMPLETED.value:
+        # Always retrieve result directly from Redis
+        import json
+        result_raw = await job_manager.redis.get(f"job_result:{job_id}")
+        result = json.loads(result_raw) if result_raw else None
+        
         return {
             "job_id": job_id,
             "status": JobStatus.COMPLETED.value,
-            "result": status_payload.get("result"),
+            "result": result,
             "processing_time_ms": status_payload.get("actual_time_ms"),
             "completed_at": status_payload.get("completed_at"),
         }
