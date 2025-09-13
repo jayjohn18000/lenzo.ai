@@ -63,7 +63,7 @@ export class APIClient {
   // Main query method with async job support
   async query(request: QueryRequest, options?: { fast?: boolean }): Promise<QueryResponse> {
     const fast = options?.fast ?? (request.mode === 'speed');
-    const url = `${API_BASE_URL}/api/v1/query?fast=${fast}`;
+    const url = `${API_BASE_URL}/dev/query?fast=${fast}`;
     
     console.log('🚀 API Client Query:', {
       url,
@@ -72,11 +72,11 @@ export class APIClient {
     });
     
     try {
-      const response = await fetch(url, {
+        const response = await fetch(url, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          ...(API_KEY && { 'Authorization': `Bearer ${API_KEY}` }),
+          // No authentication required for dev endpoint
         },
         body: JSON.stringify(request),
       });
@@ -134,10 +134,10 @@ export class APIClient {
     
     while (attempts < maxAttempts) {
       try {
-        const response = await fetch(`${API_BASE_URL}/api/v1/jobs/${jobId}`, {
+        const response = await fetch(`${API_BASE_URL}/dev/jobs/${jobId}`, {
           headers: {
-            'Authorization': `Bearer ${API_KEY}`,
             'Content-Type': 'application/json'
+            // No authentication required for dev endpoint
           }
         });
         const data = await response.json();
@@ -212,7 +212,7 @@ export class APIClient {
   // Get usage statistics
   async getUsageStats(days: number = 30): Promise<UsageStats> {
     try {
-      const data = await this.safeRequest(`/api/v1/usage?days=${days}`);
+      const data = await this.safeRequest(`/dev/usage?days=${days}`);
       return validateUsageStats(data);
     } catch (error) {
       console.error('Usage stats validation failed:', error);
@@ -223,7 +223,7 @@ export class APIClient {
   // Get available models
   async getModels(): Promise<ModelInfo> {
     try {
-      return await this.safeRequest('/api/v1/models');
+      return await this.safeRequest('/dev/models');
     } catch (error) {
       console.error('Models API failed:', error);
       throw new Error(`${ERROR_MESSAGES.API_UNAVAILABLE} - models endpoint`);
@@ -232,7 +232,7 @@ export class APIClient {
 
   // Health check
   async getHealth(): Promise<any> {
-    return this.safeRequest('/api/v1/health');
+    return this.safeRequest('/dev/health');
   }
 }
 

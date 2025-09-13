@@ -1,0 +1,160 @@
+title: "Fix 403 Authentication Error - Systematic Debug & Resolution"
+slug: "auth-403-debug"
+priority: "high"
+status: "open"
+assignee: "cursor"
+labels: ["authentication", "debug", "infrastructure", "frontend", "backend"]
+
+description: |
+  ## Problem Statement
+  The system is experiencing a **403 Not Authenticated** error loop where:
+  - ✅ Prompt submission was working previously
+  - ❌ Frontend now falls back to dummy data due to auth failures
+  - 🔄 We're stuck in a cycle of partial fixes that keep regressing
+
+  ## Root Cause Analysis
+  Based on code analysis, the issue stems from:
+  1. **Frontend** calls `/dev/query` endpoint (no auth required)
+  2. **Backend** `/dev/query` endpoint exists and should work without authentication
+  3. **Infrastructure** dependencies (SQLite/Redis) may be failing silently
+  4. **Environment** variables may not be properly configured
+
+  ## Current Architecture
+  - Frontend → `/api/route` → Backend `/dev/query` (no auth)
+  - Backend has development bypass in `verify_api_key()` function
+  - SQLite database for user/API key storage
+  - Redis for job queue and caching
+  - Environment: `NEXTAGI_DEV_MODE=true`, `DEBUG=true`
+
+acceptance_criteria:
+  - [ ] SQLite database is running and accessible
+  - [ ] Redis cache is running and accessible  
+  - [ ] Backend `/dev/query` endpoint responds without 403 error
+  - [ ] Frontend successfully submits prompts without falling back to dummy data
+  - [ ] All infrastructure services are verified as healthy
+  - [ ] Authentication flow is properly documented
+
+manual_tasks:
+  - title: "Verify SQLite Database Status"
+    description: |
+      Check if SQLite database is running and accessible:
+      1. Check if `nextagi.db` file exists in project root
+      2. Verify database schema is created (users, api_keys tables)
+      3. Test database connection from command line
+      4. Check for any database lock files or corruption
+    commands:
+      - "ls -la nextagi.db"
+      - "sqlite3 nextagi.db '.tables'"
+      - "sqlite3 nextagi.db 'SELECT COUNT(*) FROM users;'"
+      - "sqlite3 nextagi.db 'SELECT COUNT(*) FROM api_keys;'"
+
+  - title: "Verify Redis Cache Status"
+    description: |
+      Check if Redis is running and accessible:
+      1. Test Redis connection with ping
+      2. Check Redis job queue status
+      3. Verify Redis configuration matches backend settings
+      4. Check for any Redis connection errors in logs
+    commands:
+      - "redis-cli ping"
+      - "redis-cli info server"
+      - "redis-cli keys 'jobs:*'"
+      - "redis-cli llen jobs:queue"
+
+  - title: "Check Backend Service Status"
+    description: |
+      Verify backend services are running properly:
+      1. Check if backend process is running on port 8000/8001
+      2. Test backend health endpoint
+      3. Check backend logs for errors
+      4. Verify environment variables are loaded
+    commands:
+      - "curl http://localhost:8000/dev/health"
+      - "curl http://localhost:8001/dev/health"
+      - "ps aux | grep uvicorn"
+      - "tail -f logs/backend.log"
+
+automated_tasks:
+  - title: "Fix Frontend API Client Authentication"
+    description: |
+      The frontend API client is not properly configured for development mode.
+      Need to ensure it's calling the correct endpoint without auth headers.
+    files:
+      - "frontend/app/api/route/route.ts"
+      - "frontend/lib/api/client.ts"
+    changes:
+      - Remove any authentication headers from dev endpoint calls
+      - Ensure proper error handling for 403 responses
+      - Add better logging for debugging
+
+  - title: "Verify Backend Dev Endpoint Configuration"
+    description: |
+      Ensure the `/dev/query` endpoint is properly configured and accessible.
+    files:
+      - "backend/main.py"
+    changes:
+      - Verify `/dev/query` endpoint is properly registered
+      - Check DEBUG mode configuration
+      - Ensure no authentication middleware is applied to dev routes
+
+  - title: "Add Comprehensive Health Checks"
+    description: |
+      Add health check endpoints to verify all dependencies are working.
+    files:
+      - "backend/main.py"
+    changes:
+      - Add SQLite connection health check
+      - Add Redis connection health check
+      - Add job queue health check
+      - Return detailed status information
+
+  - title: "Fix Environment Configuration"
+    description: |
+      Ensure all required environment variables are properly set.
+    files:
+      - ".env"
+      - "backend/judge/config.py"
+    changes:
+      - Set NEXTAGI_DEV_MODE=true
+      - Set DEBUG=true
+      - Set NEXTAGI_TEST_API_KEY=nextagi_test-key-123
+      - Verify all Redis and database URLs
+
+testing:
+  - title: "Test Authentication Flow"
+    description: |
+      Test the complete authentication flow from frontend to backend.
+    steps:
+      - Start backend server
+      - Start frontend server
+      - Submit a test prompt
+      - Verify response is not 403
+      - Check logs for any errors
+
+  - title: "Test Infrastructure Dependencies"
+    description: |
+      Test that all infrastructure dependencies are working.
+    steps:
+      - Test SQLite database connection
+      - Test Redis cache connection
+      - Test job queue functionality
+      - Verify all health checks pass
+
+rollback_plan: |
+  If changes cause further issues:
+  1. Revert frontend API client changes
+  2. Revert backend endpoint changes
+  3. Restart all services
+  4. Check original working configuration
+
+notes: |
+  This ticket focuses on systematic debugging rather than quick fixes.
+  The goal is to identify the root cause and implement a robust solution
+  that prevents future regressions.
+
+  Key areas to investigate:
+  - Infrastructure service health
+  - Environment variable configuration
+  - Authentication middleware configuration
+  - Frontend-backend communication
+  - Error handling and logging

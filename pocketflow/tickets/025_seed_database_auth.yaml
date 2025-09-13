@@ -1,0 +1,137 @@
+title: "Seed Database with Test User and API Key for Authentication"
+slug: "seed-database-auth"
+priority: "high"
+status: "open"
+assignee: "user"
+labels: ["authentication", "database", "seeding", "development"]
+
+description: |
+  ## Problem Identified
+  The 403 authentication errors are caused by an empty database state:
+  - `users` table: 0 records
+  - `api_keys` table: 0 records
+  - Redis job queue: empty
+  
+  This prevents the authentication system from working properly, even in development mode.
+
+  ## Root Cause Analysis
+  The authentication flow in `backend/auth/api_key.py` has:
+  1. Development bypass for `NEXTAGI_TEST_API_KEY=nextagi_test-key-123`
+  2. Database fallback when dev mode is enabled
+  3. But with empty database, the fallback logic may not work correctly
+  
+  ## Solution Strategy
+  Seed the database with minimal test data to enable proper authentication flow.
+
+acceptance_criteria:
+  - [ ] Database has at least 1 test user record
+  - [ ] Database has at least 1 test API key record
+  - [ ] Test user has active subscription status
+  - [ ] Test API key is properly formatted and active
+  - [ ] Authentication flow works without 403 errors
+  - [ ] Frontend can submit prompts successfully
+
+manual_tasks:
+  - title: "Verify Existing Test User"
+    description: |
+      Check existing test users in the database (already seeded).
+    commands:
+      - "sqlite3 nextagi.db 'SELECT * FROM users WHERE email = \"test@nextagi.dev\";'"
+      - "sqlite3 nextagi.db 'SELECT COUNT(*) FROM users;'"
+    verification:
+      - "User test@nextagi.dev exists with id=2"
+      - "User has active subscription status"
+      - "User has enterprise tier (unlimited access)"
+
+  - title: "Create Test API Key Record"
+    description: |
+      Insert a test API key into the api_keys table with correct schema.
+    commands:
+      - "sqlite3 nextagi.db \"INSERT INTO api_keys (id, user_id, name, key_hash, key_prefix, is_active, created_at, last_used_at, requests_per_minute, requests_per_day) VALUES (1, 2, 'Test Key', '$(echo -n 'nextagi_test-key-123' | sha256sum | cut -d' ' -f1)', 'nextagi_test', 1, datetime('now'), datetime('now'), 1000, 100000);\""
+      - "sqlite3 nextagi.db 'SELECT * FROM api_keys;'"
+    verification:
+      - "API key record exists with id=1"
+      - "API key is linked to user_id=2 (test@nextagi.dev)"
+      - "API key is active (is_active=1)"
+      - "API key has high rate limits"
+
+  - title: "Verify Database State"
+    description: |
+      Confirm the database now has the required records for authentication.
+    commands:
+      - "sqlite3 nextagi.db 'SELECT COUNT(*) FROM users;'"
+      - "sqlite3 nextagi.db 'SELECT COUNT(*) FROM api_keys;'"
+      - "sqlite3 nextagi.db 'SELECT u.email, u.subscription_status, ak.key_name, ak.is_active FROM users u JOIN api_keys ak ON u.id = ak.user_id;'"
+    verification:
+      - "Users count > 0"
+      - "API keys count > 0"
+      - "Join query returns active user with active API key"
+
+automated_tasks:
+  - title: "Create Database Seeding Script"
+    description: |
+      Create a reusable script to seed the database with test data.
+    files:
+      - "scripts/seed_test_auth.py"
+    changes:
+      - Create script to insert test user and API key
+      - Add proper error handling and validation
+      - Make it idempotent (safe to run multiple times)
+
+  - title: "Update Authentication Flow"
+    description: |
+      Ensure the authentication flow properly handles the seeded data.
+    files:
+      - "backend/auth/api_key.py"
+    changes:
+      - Verify development bypass logic works correctly
+      - Add better error handling for empty database state
+      - Improve logging for authentication debugging
+
+  - title: "Add Database Health Check"
+    description: |
+      Add a health check endpoint to verify database state.
+    files:
+      - "backend/main.py"
+    changes:
+      - Add endpoint to check if users and API keys exist
+      - Return detailed database status information
+      - Help with debugging authentication issues
+
+testing:
+  - title: "Test Authentication Flow"
+    description: |
+      Test the complete authentication flow after seeding.
+    steps:
+      - Start backend server
+      - Test `/dev/query` endpoint (should work without auth)
+      - Test `/api/v1/query` endpoint with test API key
+      - Verify no 403 errors occur
+      - Check frontend can submit prompts successfully
+
+  - title: "Test Database Seeding Script"
+    description: |
+      Test the database seeding script works correctly.
+    steps:
+      - Run seeding script
+      - Verify database has required records
+      - Test authentication with seeded data
+      - Verify script is idempotent
+
+rollback_plan: |
+  If seeding causes issues:
+  1. Drop the test records from database
+  2. Revert to empty database state
+  3. Check if dev bypass still works
+  4. Investigate authentication flow logic
+
+notes: |
+  This ticket focuses on seeding the database with minimal test data
+  to enable proper authentication flow. The goal is to unblock the
+  frontend from falling back to dummy data.
+
+  Key considerations:
+  - Use proper SQLite syntax for datetime fields
+  - Ensure API key hash matches the expected test key
+  - Make seeding idempotent to avoid duplicate records
+  - Verify authentication flow works after seeding

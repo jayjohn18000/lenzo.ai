@@ -1,0 +1,151 @@
+title: "Update Frontend Widgets to Reflect Real Backend Data"
+slug: "frontend-widgets-integration"
+priority: "high"
+status: "open"
+assignee: "cursor"
+labels: ["frontend", "widgets", "dashboard", "data-integration"]
+
+description: |
+  ## Problem Statement
+  The frontend dashboard widgets are currently showing dummy/mock data instead of
+  real data from the backend. The backend is now fully operational and returning
+  real analytics data, but the frontend widgets need to be updated to consume
+  and display this real data.
+
+  ## Current State
+  - ✅ Backend returns real analytics data (confidence, cost, model rankings, etc.)
+  - ✅ Backend has usage tracking and query logs
+  - ❌ Frontend widgets show dummy data
+  - ❌ Frontend doesn't consume real backend analytics
+  - ❌ Dashboard doesn't reflect actual system performance
+
+  ## Solution Strategy
+  Update frontend widgets to:
+  1. Consume real backend analytics data
+  2. Display actual usage statistics
+  3. Show real model performance metrics
+  4. Reflect actual cost optimization data
+  5. Display real-time system health
+
+acceptance_criteria:
+  - [ ] Today's Usage widget shows real query count from backend
+  - [ ] Average Confidence widget shows real confidence scores
+  - [ ] Cost Optimization widget shows real cost data
+  - [ ] Top Models widget shows real model rankings
+  - [ ] All widgets update with real backend data
+  - [ ] Dashboard reflects actual system performance
+  - [ ] No more dummy/mock data displayed
+
+manual_tasks:
+  - title: "Verify Backend Analytics Endpoints"
+    description: |
+      Check that backend provides the required analytics data endpoints.
+    commands:
+      - "curl http://localhost:8000/api/v1/stats"
+      - "curl http://localhost:8000/admin/jobs"
+      - "curl http://localhost:8000/dev/health"
+    verification:
+      - "Stats endpoint returns usage data"
+      - "Jobs endpoint returns job statistics"
+      - "Health endpoint returns system status"
+
+automated_tasks:
+  - title: "Update Usage Statistics Widget"
+    description: |
+      Update the usage statistics widget to consume real backend data.
+    files:
+      - "frontend/components/charts/UsageChart.tsx"
+      - "frontend/lib/api/stats.ts"
+    changes:
+      - Connect to backend usage statistics endpoint
+      - Display real query counts and usage data
+      - Add real-time updates
+      - Handle loading and error states
+
+  - title: "Update Confidence Metrics Widget"
+    description: |
+      Update the confidence metrics widget to show real confidence scores.
+    files:
+      - "frontend/components/charts/ConfidenceChart.tsx"
+      - "frontend/lib/api/analytics.ts"
+    changes:
+      - Connect to backend confidence data
+      - Display real confidence scores
+      - Show confidence trends over time
+      - Add confidence distribution charts
+
+  - title: "Update Cost Optimization Widget"
+    description: |
+      Update the cost optimization widget to show real cost data.
+    files:
+      - "frontend/components/charts/CostChart.tsx"
+      - "frontend/lib/api/costs.ts"
+    changes:
+      - Connect to backend cost data
+      - Display real cost per query
+      - Show cost optimization opportunities
+      - Add cost trend analysis
+
+  - title: "Update Model Performance Widget"
+    description: |
+      Update the model performance widget to show real model rankings.
+    files:
+      - "frontend/components/charts/ModelChart.tsx"
+      - "frontend/lib/api/models.ts"
+    changes:
+      - Connect to backend model comparison data
+      - Display real model rankings
+      - Show model performance metrics
+      - Add model selection recommendations
+
+  - title: "Create Real-time Data Hooks"
+    description: |
+      Create React hooks for real-time data fetching from backend.
+    files:
+      - "frontend/hooks/use-stats.ts"
+      - "frontend/hooks/use-analytics.ts"
+      - "frontend/hooks/use-models.ts"
+    changes:
+      - Create custom hooks for data fetching
+      - Add real-time updates with polling
+      - Implement error handling and retry logic
+      - Add loading states and caching
+
+testing:
+  - title: "Test Widget Data Integration"
+    description: |
+      Test that all widgets display real backend data.
+    steps:
+      - Start frontend and backend servers
+      - Submit several test queries
+      - Verify widgets update with real data
+      - Check that data is accurate and up-to-date
+      - Test real-time updates
+
+  - title: "Test Dashboard Performance"
+    description: |
+      Test that dashboard performs well with real data.
+    steps:
+      - Load dashboard with real data
+      - Test widget loading times
+      - Verify data refresh rates
+      - Check for memory leaks or performance issues
+
+rollback_plan: |
+  If widget integration causes issues:
+  1. Revert widget changes to use dummy data
+  2. Revert API integration changes
+  3. Test that dashboard still loads
+  4. Investigate data integration issues
+
+notes: |
+  This ticket focuses on connecting the frontend widgets to the real backend
+  data. The goal is to create a fully functional dashboard that reflects
+  actual system performance and analytics.
+
+  Key considerations:
+  - Real-time data updates
+  - Error handling and fallbacks
+  - Performance optimization
+  - Data caching and refresh strategies
+  - User experience during data loading

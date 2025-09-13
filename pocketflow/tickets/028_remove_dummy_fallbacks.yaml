@@ -1,0 +1,151 @@
+title: "Remove Dummy Data Fallbacks and Clean Up Frontend"
+slug: "remove-dummy-fallbacks"
+priority: "medium"
+status: "open"
+assignee: "cursor"
+labels: ["frontend", "cleanup", "dummy-data", "fallbacks"]
+
+description: |
+  ## Problem Statement
+  The frontend still contains dummy data fallbacks and mock data that are no longer
+  needed now that the backend is fully operational. These fallbacks should be removed
+  to clean up the codebase and ensure the frontend only uses real backend data.
+
+  ## Current State
+  - ✅ Backend is fully operational with real data
+  - ✅ Frontend widgets are being updated to use real data
+  - ❌ Frontend still contains dummy data fallbacks
+  - ❌ Mock data and hardcoded values still exist
+  - ❌ Error handling falls back to dummy data
+
+  ## Solution Strategy
+  Remove all dummy data fallbacks and:
+  1. Clean up mock data and hardcoded values
+  2. Remove dummy data fallback logic
+  3. Update error handling to show proper error states
+  4. Ensure frontend gracefully handles backend errors
+  5. Add proper loading states instead of dummy data
+
+acceptance_criteria:
+  - [ ] All dummy data fallbacks removed
+  - [ ] No hardcoded mock values in components
+  - [ ] Error handling shows proper error states
+  - [ ] Loading states replace dummy data
+  - [ ] Frontend gracefully handles backend errors
+  - [ ] Codebase is clean and maintainable
+  - [ ] No more fallback to dummy data
+
+manual_tasks:
+  - title: "Audit Frontend for Dummy Data"
+    description: |
+      Search through frontend code to identify all dummy data usage.
+    commands:
+      - "grep -r 'dummy\|mock\|fake\|test' frontend/components/"
+      - "grep -r 'fallback\|default.*data' frontend/"
+      - "grep -r 'hardcoded\|static.*data' frontend/"
+    verification:
+      - "Identify all files with dummy data"
+      - "List all components using fallback data"
+      - "Document all hardcoded values"
+
+automated_tasks:
+  - title: "Remove Dummy Data from Components"
+    description: |
+      Remove all dummy data and mock values from frontend components.
+    files:
+      - "frontend/components/charts/*.tsx"
+      - "frontend/components/QueryInterface.tsx"
+      - "frontend/components/HealthStatus.tsx"
+    changes:
+      - Remove hardcoded dummy data
+      - Remove mock data fallbacks
+      - Replace with proper loading states
+      - Add error handling for missing data
+
+  - title: "Update Error Handling"
+    description: |
+      Update error handling to show proper error states instead of dummy data.
+    files:
+      - "frontend/components/ErrorBoundary.tsx"
+      - "frontend/components/ErrorDisplay.tsx"
+      - "frontend/lib/api/client.ts"
+    changes:
+      - Remove dummy data fallbacks in error cases
+      - Add proper error state components
+      - Implement retry mechanisms
+      - Add user-friendly error messages
+
+  - title: "Add Proper Loading States"
+    description: |
+      Add proper loading states to replace dummy data during data fetching.
+    files:
+      - "frontend/components/ui/LoadingSpinner.tsx"
+      - "frontend/components/ui/Skeleton.tsx"
+      - "frontend/hooks/use-loading.ts"
+    changes:
+      - Create loading spinner components
+      - Add skeleton loading states
+      - Implement loading state management
+      - Add loading indicators to widgets
+
+  - title: "Clean Up API Client"
+    description: |
+      Clean up the API client to remove dummy data fallbacks.
+    files:
+      - "frontend/lib/api/client.ts"
+      - "frontend/lib/api.ts"
+    changes:
+      - Remove dummy data fallbacks
+      - Add proper error handling
+      - Implement retry logic
+      - Add request/response logging
+
+  - title: "Update Dashboard Layout"
+    description: |
+      Update dashboard layout to handle real data properly.
+    files:
+      - "frontend/app/dashboard/page.tsx"
+      - "frontend/app/page.tsx"
+    changes:
+      - Remove dummy data initialization
+      - Add proper data fetching
+      - Implement error boundaries
+      - Add loading states
+
+testing:
+  - title: "Test Error Handling"
+    description: |
+      Test that error handling works properly without dummy data.
+    steps:
+      - Simulate backend errors
+      - Test network failures
+      - Verify error states display correctly
+      - Test retry mechanisms
+
+  - title: "Test Loading States"
+    description: |
+      Test that loading states work properly.
+    steps:
+      - Test slow network conditions
+      - Verify loading indicators display
+      - Test loading state transitions
+      - Check for loading state bugs
+
+rollback_plan: |
+  If removing dummy data causes issues:
+  1. Revert dummy data removal changes
+  2. Revert error handling changes
+  3. Test that frontend still works
+  4. Investigate error handling issues
+
+notes: |
+  This ticket focuses on cleaning up the frontend codebase by removing
+  all dummy data fallbacks. The goal is to create a clean, maintainable
+  frontend that only uses real backend data.
+
+  Key considerations:
+  - Proper error handling and user feedback
+  - Loading states and user experience
+  - Code maintainability and cleanliness
+  - Performance optimization
+  - User experience during errors and loading

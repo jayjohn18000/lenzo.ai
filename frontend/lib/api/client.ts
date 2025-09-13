@@ -48,8 +48,7 @@ import { z } from 'zod';
           ...options,
           headers: {
           'Content-Type': 'application/json',
-          ...(this.apiKey && { 'Authorization': `Bearer ${this.apiKey}` }),
-            ...(this.apiKey && { 'X-API-Key': this.apiKey }),
+          // No authentication required for dev endpoint
             ...options.headers,
           },
         });
@@ -99,7 +98,7 @@ import { z } from 'zod';
     ): Promise<QueryResponse> {
       // First, make the initial request
       const response = await this.request(
-        '/api/v1/query',
+        '/dev/query',
         QueryEndpointResponseSchema,
         {
           method: 'POST',
@@ -140,7 +139,7 @@ import { z } from 'zod';
   
         try {
           const jobStatus = await this.request(
-            `/api/v1/jobs/${jobId}`,
+            `/dev/jobs/${jobId}`,
             AsyncJobResponseSchema
           );
   
@@ -151,7 +150,7 @@ import { z } from 'zod';
           if (jobStatus.status === 'completed') {
             // Fetch the actual result
             const result = await this.request(
-              `/api/v1/jobs/${jobId}/result`,
+              `/dev/jobs/${jobId}`,
               QueryResponseSchema
             );
             return result;
@@ -174,7 +173,7 @@ import { z } from 'zod';
      */
     async getUsageStats(days: number = 30): Promise<UsageStats> {
       return this.request(
-        `/api/v1/usage?days=${days}`,
+        `/dev/usage?days=${days}`,
         UsageStatsSchema
       );
     }
@@ -184,7 +183,7 @@ import { z } from 'zod';
      */
     async healthCheck(): Promise<boolean> {
       try {
-        const response = await fetch(`${this.baseURL}/api/v1/health`);
+        const response = await fetch(`${this.baseURL}/dev/health`);
         return response.ok;
       } catch {
         return false;

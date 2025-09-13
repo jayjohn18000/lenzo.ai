@@ -1,0 +1,121 @@
+title: "Fix Frontend API Client Authentication Headers"
+slug: "frontend-auth-headers"
+priority: "high"
+status: "open"
+assignee: "cursor"
+labels: ["frontend", "authentication", "api-client", "headers"]
+
+description: |
+  ## Problem Statement
+  The frontend API client is not properly configured to include authentication headers
+  when making requests to the backend. The backend is now fully operational with
+  proper authentication, but the frontend needs to be updated to use the correct
+  API key and headers.
+
+  ## Current State
+  - ✅ Backend `/dev/query` endpoint works without auth (development mode)
+  - ✅ Backend `/api/v1/query` endpoint works with proper API key authentication
+  - ❌ Frontend API client doesn't include authentication headers
+  - ❌ Frontend may be calling wrong endpoint or missing auth
+
+  ## Solution Strategy
+  Update the frontend API client to:
+  1. Include proper authentication headers
+  2. Use the correct API key from environment variables
+  3. Handle both dev and production authentication flows
+  4. Provide proper error handling for auth failures
+
+acceptance_criteria:
+  - [ ] Frontend API client includes proper authentication headers
+  - [ ] API key is securely loaded from environment variables
+  - [ ] Both dev and production authentication flows work
+  - [ ] Proper error handling for authentication failures
+  - [ ] Frontend can successfully call backend endpoints
+  - [ ] No more 403 authentication errors from frontend
+
+manual_tasks:
+  - title: "Verify Environment Variables"
+    description: |
+      Check that frontend has access to the required API key.
+    commands:
+      - "cat .env | grep NEXTAGI_TEST_API_KEY"
+      - "echo $NEXTAGI_TEST_API_KEY"
+    verification:
+      - "NEXTAGI_TEST_API_KEY is set to nextagi_test-key-123"
+      - "Environment variable is accessible to frontend"
+
+automated_tasks:
+  - title: "Update Frontend API Client Authentication"
+    description: |
+      Update the frontend API client to include proper authentication headers.
+    files:
+      - "frontend/lib/api/client.ts"
+      - "frontend/app/api/route/route.ts"
+    changes:
+      - Add API key header to requests
+      - Implement proper authentication flow
+      - Add error handling for auth failures
+      - Support both dev and production modes
+
+  - title: "Create Secure API Key Management"
+    description: |
+      Create a secure way to manage API keys in the frontend.
+    files:
+      - "frontend/lib/api/auth.ts"
+    changes:
+      - Create API key management utility
+      - Add secure storage for API keys
+      - Implement key validation
+      - Add key rotation support
+
+  - title: "Update Frontend Environment Configuration"
+    description: |
+      Ensure frontend has proper environment configuration for API keys.
+    files:
+      - "frontend/.env.local"
+      - "frontend/next.config.ts"
+    changes:
+      - Add NEXT_PUBLIC_API_KEY environment variable
+      - Configure Next.js to expose API key to client
+      - Add environment validation
+      - Document required environment variables
+
+testing:
+  - title: "Test Frontend Authentication"
+    description: |
+      Test that frontend can successfully authenticate with backend.
+    steps:
+      - Start frontend server
+      - Start backend server
+      - Submit a prompt from frontend
+      - Verify no 403 errors
+      - Check that backend receives proper auth headers
+      - Verify response is received correctly
+
+  - title: "Test API Key Management"
+    description: |
+      Test the API key management functionality.
+    steps:
+      - Test API key loading from environment
+      - Test API key validation
+      - Test error handling for invalid keys
+      - Test key rotation functionality
+
+rollback_plan: |
+  If authentication changes cause issues:
+  1. Revert frontend API client changes
+  2. Revert environment configuration changes
+  3. Test that dev endpoint still works
+  4. Investigate authentication flow issues
+
+notes: |
+  This ticket focuses on fixing the frontend authentication to work with
+  the now-operational backend. The goal is to ensure proper API key
+  handling and authentication headers.
+
+  Key considerations:
+  - Secure API key storage and transmission
+  - Support for both dev and production modes
+  - Proper error handling and user feedback
+  - Environment variable management
+  - Next.js configuration for client-side API keys

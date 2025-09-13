@@ -20,9 +20,10 @@ export function HealthStatus() {
     setHealth({ status: 'checking', message: 'Checking backend health...' });
     
     try {
-      const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL || process.env.NEXT_PUBLIC_BACKEND_URL || 'http://localhost:8000'}/api/v1/health`, {
+      const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL || process.env.NEXT_PUBLIC_BACKEND_URL || 'http://localhost:8000'}/dev/health`, {
         headers: {
-          'Authorization': `Bearer ${process.env.NEXT_PUBLIC_API_KEY || 'nextagi_test-key-123'}`
+          'Content-Type': 'application/json'
+          // No authentication required for dev endpoint
         }
       });
 

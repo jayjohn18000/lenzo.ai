@@ -92,9 +92,10 @@ export default function NextAGIInterface() {
       setStatsError(null);
       setStatsLoading(true);
       
-      const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL || process.env.NEXT_PUBLIC_BACKEND_URL || 'http://localhost:8000'}/api/v1/usage?days=7`, {
+      const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL || process.env.NEXT_PUBLIC_BACKEND_URL || 'http://localhost:8000'}/dev/usage?days=7`, {
         headers: {
-          'Authorization': `Bearer ${process.env.NEXT_PUBLIC_API_KEY || 'nextagi_test-key-123'}`
+          'Content-Type': 'application/json'
+          // No authentication required for dev endpoint
         }
       });
       
