@@ -22,6 +22,7 @@ from backend.jobs.models import JobStatus
 from backend.dependencies import get_job_manager
 from backend.judge.pipelines.runner import run_pipeline
 from backend.judge.schemas import RouteRequest, RouteOptions
+from backend.logging_config import QueryLogger
 
 logger = logging.getLogger(__name__)
 router = APIRouter(prefix="/api/v1", tags=["NextAGI Core"])
@@ -257,6 +258,19 @@ async def query_models(
     start_time = time.time()
     request_id = str(uuid.uuid4())
 
+    # Log query request to database
+    try:
+        from backend.main import query_logger
+        if query_logger:
+            query_logger.log_query_request(
+                request_id=request_id,
+                prompt=request.prompt,
+                mode=request.mode,
+                max_models=request.max_models
+            )
+    except Exception as e:
+        logger.warning(f"Failed to log query request: {e}")
+
     # Estimate processing time and decide path
     estimated_time = estimate_query_time(request)
     logger.info(f"Query estimated time: {estimated_time}ms, fast={fast}")
@@ -276,6 +290,15 @@ async def query_models(
             response = await build_query_response(
                 result, request, request_id, selected_models, response_time_ms
             )
+            
+            # Log query response to database
+            try:
+                from backend.main import query_logger
+                if query_logger:
+                    query_logger.log_query_response(request_id, response.dict())
+            except Exception as e:
+                logger.warning(f"Failed to log query response: {e}")
+            
             logger.info(f"Fast path completed in {response_time_ms}ms")
             return response
         except asyncio.TimeoutError:

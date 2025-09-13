@@ -56,6 +56,7 @@ from backend.api.v1.stats import stats_router
 
 # Analytics DB (optional but supported)
 from backend.database.models import Base as AnalyticsBase  # noqa: F401
+from backend.logging_config import setup_database_logging
 
 # Configure logging
 logging.basicConfig(
@@ -72,12 +73,13 @@ job_manager = None
 worker_task: asyncio.Task | None = None
 cache_instance = None
 session_factory = None
+query_logger = None
 
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     """Startup and shutdown events with comprehensive initialization"""
-    global redis_client, job_manager, worker_task, cache_instance, session_factory
+    global redis_client, job_manager, worker_task, cache_instance, session_factory, query_logger
 
     logger.info("🚀 Starting NextAGI...")
 
@@ -102,6 +104,10 @@ async def lifespan(app: FastAPI):
         with engine.connect() as conn:
             conn.execute(text("SELECT 1"))
         logger.info("✅ Database connection established")
+        
+        # Set up database logging
+        query_logger = setup_database_logging(session_factory)
+        logger.info("✅ Database logging configured")
     except Exception as e:
         logger.error(f"❌ Database connection failed: {e}")
         raise

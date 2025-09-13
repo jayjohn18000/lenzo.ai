@@ -67,7 +67,9 @@ export default function Dashboard() {
     }).format(amount);
 
   const formatPercentage01 = (value01: number): string => {
-    const bounded = Math.max(0, Math.min(100, value01));
+    // Input is already a 0-1 fraction, convert to percentage
+    const percentage = value01 * 100;
+    const bounded = Math.max(0, Math.min(100, percentage));
     return `${safeToFixed(bounded, 1)}%`;
   };
 
@@ -236,7 +238,7 @@ export default function Dashboard() {
                 <div>
                   <p className="text-sm text-gray-600">Avg Confidence (7d)</p>
                   <p className="text-2xl font-bold">
-                    {statsLoading ? "—" : usageStats ? formatPercentage01(usageStats.avg_confidence * 100) : "ERROR"}
+                    {statsLoading ? "—" : usageStats ? formatPercentage01(usageStats.avg_confidence) : "ERROR"}
                   </p>
                 </div>
                 <Target className="h-8 w-8 text-purple-500" />
@@ -379,7 +381,7 @@ export default function Dashboard() {
                   </CardTitle>
                   <div className="flex items-center gap-2">
                     <Badge className={getConfidenceColor(result.confidence)}>
-                      Confidence: {formatPercentage01(result.confidence * 100)}
+                      Confidence: {formatPercentage01(result.confidence)}
                     </Badge>
                     <Badge variant="outline">
                       {formatTimeMs(result.response_time_ms)}
@@ -431,7 +433,7 @@ export default function Dashboard() {
                     </div>
                     <div>
                       <div className="text-2xl font-bold text-green-600">
-                        {formatPercentage01(result.model_comparison.best_confidence * 100)}
+                        {formatPercentage01(result.model_comparison.best_confidence)}
                       </div>
                       <div className="text-sm text-gray-500">Best Score</div>
                     </div>
@@ -486,7 +488,7 @@ export default function Dashboard() {
                             <div className="flex items-center gap-2">
                               <ConfidenceIcon className={`h-4 w-4 ${getConfidenceColor(metric.confidence).split(' ')[0]}`} />
                               <Badge className={getConfidenceColor(metric.confidence)}>
-                                {formatPercentage01(metric.confidence * 100)}
+                                {formatPercentage01(metric.confidence)}
                               </Badge>
                             </div>
                           </div>

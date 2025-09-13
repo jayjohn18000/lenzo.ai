@@ -226,7 +226,7 @@ export default function NextAGIInterface() {
                 <Shield className="h-3 w-3 text-gray-400" />
                 <span className="text-gray-400">Reliability</span>
               </div>
-              <span className="font-semibold text-green-400">{safeToFixed(metric.reliability_score * 100, 0)}%</span>
+              <span className="font-semibold text-green-400">{safePercentage(metric.reliability_score, { digits: 0, expectsFraction: true })}</span>
             </div>
             
             <div className="space-y-1">
@@ -234,7 +234,7 @@ export default function NextAGIInterface() {
                 <AlertTriangle className="h-3 w-3 text-gray-400" />
                 <span className="text-gray-400">Risk</span>
               </div>
-              <span className="font-semibold text-red-400">{safeToFixed(metric.hallucination_risk * 100, 0)}%</span>
+              <span className="font-semibold text-red-400">{safePercentage(metric.hallucination_risk, { digits: 0, expectsFraction: true })}</span>
             </div>
           </div>
 
@@ -243,7 +243,7 @@ export default function NextAGIInterface() {
             <div>
               <div className="flex justify-between text-xs mb-2">
                 <span className="text-gray-400">Consistency</span>
-                <span className="text-white">{safeToFixed(metric.consistency_score * 100, 0)}%</span>
+                <span className="text-white">{safePercentage(metric.consistency_score, { digits: 0, expectsFraction: true })}</span>
               </div>
               <div className="w-full bg-white/20 rounded-full h-2">
                 <div 
@@ -256,7 +256,7 @@ export default function NextAGIInterface() {
             <div>
               <div className="flex justify-between text-xs mb-2">
                 <span className="text-gray-400">Citation Quality</span>
-                <span className="text-white">{safeToFixed(metric.citation_quality * 100, 0)}%</span>
+                <span className="text-white">{safePercentage(metric.citation_quality, { digits: 0, expectsFraction: true })}</span>
               </div>
               <div className="w-full bg-white/20 rounded-full h-2">
                 <div 
@@ -302,7 +302,7 @@ export default function NextAGIInterface() {
           </div>
           <div>
             <div className="text-3xl font-bold text-green-400 mb-1">
-              {safeToFixed(comparison.best_confidence * 100, 0)}%
+              {safePercentage(comparison.best_confidence, { digits: 0, expectsFraction: true })}
             </div>
             <div className="text-sm text-gray-400">Best Score</div>
           </div>
@@ -320,7 +320,7 @@ export default function NextAGIInterface() {
           </div>
           <div>
             <div className="text-3xl font-bold text-purple-400 mb-1">
-              {safeToFixed(comparison.performance_spread * 100, 0)}%
+              {safePercentage(comparison.performance_spread, { digits: 0, expectsFraction: true })}
             </div>
             <div className="text-sm text-gray-400">Spread</div>
           </div>
