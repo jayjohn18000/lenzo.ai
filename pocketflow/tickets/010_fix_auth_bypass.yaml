@@ -1,0 +1,31 @@
+title: "Fix Authentication Bypass for Development"
+description: |
+  The authentication bypass in backend/auth/api_key.py is not working consistently.
+  Backend restarts are losing the bypass configuration, causing 403 errors.
+  
+  Need to make the development authentication bypass more robust and persistent.
+
+acceptance_criteria:
+  - Authentication bypass works after backend restarts
+  - Test API key "nextagi_test-key-123" is always accepted in development
+  - No 403 errors when using the test API key
+  - Proper fallback when database auth fails
+
+failure_summary: |
+  Backend authentication system is rejecting valid test API key after restarts.
+  The development bypass in verify_api_key function is not being triggered.
+  
+  Error: "HTTP 403: Not authenticated on POST /api/v1/query"
+
+technical_approach:
+  - Make authentication bypass more robust in verify_api_key function
+  - Add environment variable check for development mode
+  - Ensure bypass persists through backend restarts
+  - Add logging to track authentication flow
+
+files_to_modify:
+  - backend/auth/api_key.py
+  - backend/judge/config.py (add DEV_MODE flag)
+
+estimated_time: "30 minutes"
+priority: "high"

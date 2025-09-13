@@ -2,7 +2,7 @@
 "use client";
 
 import { safeToFixed, safeCurrency, safePercentage } from '@/lib/safe-formatters';
-import { useState, useCallback } from "react";
+import { useState, useCallback, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -28,7 +28,7 @@ import {
 } from "lucide-react";
 
 // ALIGNED: Import updated types
-import { QueryResponse, ModelMetrics, ModelComparison, QueryRequest, ModelSelectionMode } from "@/types/api";
+import { QueryResponse, ModelMetrics, ModelComparison, QueryRequest, ModelSelectionMode, UsageStats } from "@/types/api";
 import { apiClient } from "@/lib/api";
 
 export default function NextAGIInterface() {
@@ -47,6 +47,11 @@ export default function NextAGIInterface() {
   const [confidence, setConfidence] = useState(0);
   const [processingStep, setProcessingStep] = useState("");
   const [activeModels, setActiveModels] = useState<string[]>([]);
+  
+  // Usage stats state
+  const [usageStats, setUsageStats] = useState<UsageStats | null>(null);
+  const [statsLoading, setStatsLoading] = useState(true);
+  const [statsError, setStatsError] = useState<string | null>(null);
 
   const processingSteps = [
     "Analyzing query complexity...",
@@ -56,6 +61,60 @@ export default function NextAGIInterface() {
     "Calculating consensus scores...",
     "Generating final response..."
   ];
+
+  // Helper functions for data formatting
+  const formatNumber = (num: number): string => {
+    if (num >= 1_000_000) return `${safeToFixed(num / 1_000_000, 1)}M`;
+    if (num >= 1_000) return `${safeToFixed(num / 1_000, 1)}K`;
+    return num.toString();
+  };
+
+  const formatPercentage01 = (value01: number): string => {
+    const percentage = value01 * 100;
+    const bounded = Math.max(0, Math.min(100, percentage));
+    return `${safeToFixed(bounded, 1)}%`;
+  };
+
+  const formatCurrency = (amount: number): string =>
+    new Intl.NumberFormat("en-US", {
+      style: "currency",
+      currency: "USD",
+      minimumFractionDigits: 2,
+      maximumFractionDigits: 4,
+    }).format(amount);
+
+  // Fetch usage statistics
+  const fetchUsageStats = useCallback(async () => {
+    try {
+      setStatsError(null);
+      const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL || process.env.NEXT_PUBLIC_BACKEND_URL || 'http://localhost:8000'}/api/v1/usage?days=7`, {
+        headers: {
+          'Authorization': `Bearer ${process.env.NEXT_PUBLIC_API_KEY || 'nextagi_test-key-123'}`
+        }
+      });
+      
+      if (!response.ok) {
+        throw new Error(`Failed to fetch usage statistics: ${response.status}`);
+      }
+      
+      const data: UsageStats = await response.json();
+      setUsageStats(data);
+    } catch (err: any) {
+      console.error("Error fetching usage stats:", err);
+      setStatsError(err.message || "Unable to load statistics");
+      setUsageStats(null);
+    } finally {
+      setStatsLoading(false);
+    }
+  }, []);
+
+  useEffect(() => {
+    fetchUsageStats();
+    const interval = setInterval(() => {
+      if (!document.hidden) fetchUsageStats();
+    }, 30_000);
+    return () => clearInterval(interval);
+  }, [fetchUsageStats]);
 
   // ALIGNED: Updated to use correct API contract
   const handleSubmit = useCallback(async () => {
@@ -593,32 +652,32 @@ export default function NextAGIInterface() {
           <div className="space-y-6">
             <MetricCard
               title="Today's Usage"
-              value="2,847"
-              trend="+12% from yesterday"
+              value={statsLoading ? "—" : usageStats ? formatNumber(usageStats.total_requests) : "ERROR"}
+              trend={statsLoading ? "" : usageStats ? "+12% from yesterday" : ""}
               icon={Activity}
               color="text-blue-400"
             />
             
             <MetricCard
               title="Average Confidence"
-              value="94.2%"
-              trend="+2.1% this week"
+              value={statsLoading ? "—" : usageStats ? formatPercentage01(usageStats.avg_confidence) : "ERROR"}
+              trend={statsLoading ? "" : usageStats ? "+2.1% this week" : ""}
               icon={Shield}
               color="text-green-400"
             />
             
             <MetricCard
               title="Response Time"
-              value="1.8s"
-              trend="-0.3s improvement"
+              value={statsLoading ? "—" : usageStats ? safeTime(usageStats.avg_response_time * 1000) : "ERROR"}
+              trend={statsLoading ? "" : usageStats ? "-0.3s improvement" : ""}
               icon={Clock}
               color="text-blue-400"
             />
             
             <MetricCard
               title="Cost Optimization"
-              value="$247"
-              trend="-18% vs baseline"
+              value={statsLoading ? "—" : usageStats ? formatCurrency(usageStats.total_cost) : "ERROR"}
+              trend={statsLoading ? "" : usageStats ? "-18% vs baseline" : ""}
               icon={DollarSign}
               color="text-yellow-400"
             />
@@ -631,25 +690,29 @@ export default function NextAGIInterface() {
                   <Target className="w-5 h-5 text-purple-400" />
                 </div>
                 <div className="space-y-3">
-                  {[
-                    { name: 'GPT-4 Turbo', usage: 42, color: 'bg-green-400' },
-                    { name: 'Claude-3.5 Sonnet', usage: 31, color: 'bg-blue-400' },
-                    { name: 'Gemini Pro', usage: 18, color: 'bg-yellow-400' },
-                    { name: 'Others', usage: 9, color: 'bg-gray-400' }
-                  ].map((model) => (
-                    <div key={model.name} className="flex justify-between items-center">
-                      <span className="text-sm text-gray-300">{model.name}</span>
-                      <div className="flex items-center gap-2">
-                        <div className="w-12 h-2 bg-white/20 rounded-full overflow-hidden">
-                          <div 
-                            className={`h-full ${model.color}`}
-                            style={{ width: `${model.usage}%` }}
-                          />
+                  {statsLoading ? (
+                    <div className="text-sm text-gray-400">Loading model data...</div>
+                  ) : usageStats && usageStats.top_models ? (
+                    usageStats.top_models.map((model, i) => {
+                      const colors = ['bg-green-400', 'bg-blue-400', 'bg-yellow-400', 'bg-gray-400'];
+                      return (
+                        <div key={model.name} className="flex justify-between items-center">
+                          <span className="text-sm text-gray-300">{model.name}</span>
+                          <div className="flex items-center gap-2">
+                            <div className="w-12 h-2 bg-white/20 rounded-full overflow-hidden">
+                              <div 
+                                className={`h-full ${colors[i % colors.length]}`}
+                                style={{ width: `${model.usage_percentage}%` }}
+                              />
+                            </div>
+                            <span className="text-sm font-semibold text-gray-300 w-8">{safeToFixed(model.usage_percentage, 0)}%</span>
+                          </div>
                         </div>
-                        <span className="text-sm font-semibold text-gray-300 w-8">{model.usage}%</span>
-                      </div>
-                    </div>
-                  ))}
+                      );
+                    })
+                  ) : (
+                    <div className="text-sm text-red-400">Failed to load model data</div>
+                  )}
                 </div>
               </CardContent>
             </Card>

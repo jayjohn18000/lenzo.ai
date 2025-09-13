@@ -1,0 +1,16 @@
+title: "Automate Backend Restart with Proper Config"
+description: |
+  Backend restarts are losing authentication configuration. Need automated restart
+  with proper environment setup and configuration persistence.
+
+acceptance_criteria:
+  - [ ] Create automated restart script with environment setup
+  - [ ] Ensure authentication bypass is preserved on restart
+  - [ ] Add configuration validation on startup
+  - [ ] Create health check endpoint for authentication
+  - [ ] Add logging for configuration loading
+  - [ ] Test restart automation with different scenarios
+
+priority: high
+labels: ["automation", "deployment", "configuration"]
+assignee: "system"

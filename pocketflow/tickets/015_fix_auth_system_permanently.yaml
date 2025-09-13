@@ -1,0 +1,21 @@
+title: "Fix Authentication System Permanently"
+description: |
+  The authentication bypass is working but needs to be made more robust and permanent.
+  Current issues:
+  - Authentication bypass relies on hardcoded test key
+  - No proper database seeding for development
+  - Authentication errors not properly handled
+  - No health checks for auth status
+
+acceptance_criteria:
+  - [ ] Create proper database seeding script for test users
+  - [ ] Add environment-based authentication configuration
+  - [ ] Implement proper error handling for auth failures
+  - [ ] Add health checks for authentication status
+  - [ ] Create development vs production auth modes
+  - [ ] Add logging for authentication events
+  - [ ] Test authentication with both test and real API keys
+
+priority: high
+labels: ["authentication", "database", "security"]
+assignee: "system"

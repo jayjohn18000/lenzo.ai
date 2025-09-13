@@ -1,0 +1,28 @@
+title: "Automate Backend Restart with Proper Configuration"
+description: |
+  Backend restarts are losing configuration and breaking authentication.
+  Need automated process to restart backend with proper development settings.
+
+acceptance_criteria:
+  - Backend restarts with authentication bypass enabled
+  - All development configurations persist through restarts
+  - Health checks verify backend is ready
+  - No manual intervention required for restarts
+
+failure_summary: |
+  Manual backend restarts are breaking authentication and requiring manual fixes.
+  Development configuration is not persisting through restarts.
+
+technical_approach:
+  - Create startup script that ensures development mode
+  - Add environment variable validation on startup
+  - Implement health check endpoint validation
+  - Create automated restart process
+
+files_to_modify:
+  - backend/main.py (startup validation)
+  - scripts/restart_backend.sh (new)
+  - docker-compose.yml (environment variables)
+
+estimated_time: "45 minutes"
+priority: "medium"

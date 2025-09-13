@@ -1,0 +1,16 @@
+title: "Create Database Seeding for Test Users"
+description: |
+  Need proper database seeding to create test users and API keys for development
+  instead of relying on hardcoded bypasses.
+
+acceptance_criteria:
+  - [ ] Create database seeding script for test users
+  - [ ] Add test API key generation
+  - [ ] Create user management endpoints
+  - [ ] Add database migration for test data
+  - [ ] Test with multiple test users
+  - [ ] Add cleanup scripts for test data
+
+priority: medium
+labels: ["database", "testing", "seeding"]
+assignee: "system"

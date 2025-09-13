@@ -1,0 +1,29 @@
+title: "Create Database Seeding for Test Users and API Keys"
+description: |
+  Replace authentication bypass with proper database setup.
+  Create test users and API keys in the database for development.
+
+acceptance_criteria:
+  - Test user created in database with proper permissions
+  - Test API key stored in database with correct hash
+  - Authentication works through database lookup
+  - No more authentication bypass needed
+
+failure_summary: |
+  Current authentication bypass is unreliable and breaks on restarts.
+  Need proper database-backed authentication for development.
+
+technical_approach:
+  - Create database migration for test user
+  - Add API key seeding script
+  - Update authentication to use database properly
+  - Remove development bypass once database auth works
+
+files_to_modify:
+  - backend/database/models.py
+  - scripts/seed_test_data.py (new)
+  - backend/auth/api_key.py
+  - alembic/versions/ (new migration)
+
+estimated_time: "60 minutes"
+priority: "medium"

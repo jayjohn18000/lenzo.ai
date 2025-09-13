@@ -2,9 +2,12 @@
 export async function POST(req: Request) {
   const body = await req.json();
   const backend = process.env.NEXT_PUBLIC_BACKEND_URL || "http://127.0.0.1:8000";
+  const apiKey = process.env.NEXT_PUBLIC_API_KEY;
   
   console.log('🔗 Calling backend:', `${backend}/api/v1/query`);
   console.log('📦 Request body:', body);
+  console.log('🔑 API Key available:', !!apiKey);
+  console.log('🔑 API Key value:', apiKey ? `${apiKey.substring(0, 12)}...` : 'none');
 
   try {
     // Create AbortController for timeout handling
@@ -16,8 +19,8 @@ export async function POST(req: Request) {
       headers: { 
         "Content-Type": "application/json",
         // Forward API key if available
-        ...(process.env.NEXT_PUBLIC_API_KEY && {
-          "Authorization": `Bearer ${process.env.NEXT_PUBLIC_API_KEY}`
+        ...(apiKey && {
+          "Authorization": `Bearer ${apiKey}`
         })
       },
       body: JSON.stringify(body), // Direct passthrough

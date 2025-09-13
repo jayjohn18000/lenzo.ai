@@ -1,5 +1,6 @@
 from __future__ import annotations
 from backend.auth.api_key import verify_api_key
+from backend.auth.auth_health import get_auth_health
 
 # backend/api/v1/routes.py
 
@@ -593,6 +594,26 @@ def _estimate_completion(status_payload: Dict[str, Any]) -> Optional[str]:
 @router.get("/health")
 async def health_check(current_key: dict = Depends(verify_api_key)):
     return {"status": "healthy", "timestamp": time.time(), "version": "2.1.0-async"}
+
+
+@router.get("/auth/health")
+async def auth_health_check():
+    """Comprehensive authentication system health check"""
+    return await get_auth_health()
+
+
+@router.get("/auth/test")
+async def test_auth_endpoint(current_key: dict = Depends(verify_api_key)):
+    """Test endpoint to verify authentication is working"""
+    return {
+        "status": "authenticated",
+        "user_id": current_key.get("user_id"),
+        "user_email": current_key.get("user_email"),
+        "subscription_tier": current_key.get("subscription_tier"),
+        "auth_method": current_key.get("auth_method", "unknown"),
+        "timestamp": current_key.get("timestamp"),
+        "message": "Authentication successful"
+    }
 
 
 @router.get("/usage")

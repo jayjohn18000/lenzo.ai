@@ -1,0 +1,29 @@
+title: "Add Authentication Health Checks and Monitoring"
+description: |
+  Add health checks to verify authentication system is working properly.
+  Monitor authentication failures and provide better error reporting.
+
+acceptance_criteria:
+  - Health check endpoint validates authentication system
+  - Authentication failures are logged with detailed information
+  - Frontend can detect authentication issues
+  - Clear error messages for authentication problems
+
+failure_summary: |
+  Authentication failures are hard to debug and provide unclear error messages.
+  No way to verify if authentication system is working properly.
+
+technical_approach:
+  - Add authentication health check to /api/v1/health
+  - Improve error logging in authentication system
+  - Add frontend authentication status detection
+  - Create authentication troubleshooting endpoint
+
+files_to_modify:
+  - backend/api/v1/routes.py (health endpoint)
+  - backend/auth/api_key.py (error logging)
+  - frontend/lib/api.ts (error handling)
+  - frontend/components/AuthStatus.tsx (new)
+
+estimated_time: "40 minutes"
+priority: "low"
