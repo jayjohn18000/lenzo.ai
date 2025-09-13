@@ -1,0 +1,176 @@
+title: "End-to-End Testing of Complete Frontend-Backend Integration"
+slug: "end-to-end-testing"
+priority: "high"
+status: "open"
+assignee: "user"
+labels: ["testing", "integration", "frontend", "backend", "validation"]
+
+description: |
+  ## Problem Statement
+  The frontend-backend integration is now complete with:
+  - ✅ Real-time data hooks for all analytics
+  - ✅ Proper authentication headers
+  - ✅ Real backend data consumption
+  - ✅ No more dummy data fallbacks
+  
+  We need to perform comprehensive end-to-end testing to ensure the complete
+  pipeline works correctly from frontend prompt submission to dashboard updates.
+
+  ## Current State
+  - ✅ Frontend API client has authentication headers
+  - ✅ Real-time data hooks created for all analytics
+  - ✅ Dashboard updated to use real backend data
+  - ✅ All dummy data fallbacks removed
+  - ✅ Backend provides comprehensive analytics endpoints
+  - ❌ End-to-end testing not yet performed
+
+  ## Solution Strategy
+  Perform comprehensive testing of:
+  1. Frontend prompt submission → Backend processing
+  2. Real-time dashboard updates
+  3. Authentication flow validation
+  4. Error handling and edge cases
+  5. Performance and user experience
+
+acceptance_criteria:
+  - [ ] Frontend can submit prompts successfully
+  - [ ] Backend processes prompts and returns results
+  - [ ] Dashboard shows real-time updates
+  - [ ] All analytics widgets display real data
+  - [ ] Authentication works without 403 errors
+  - [ ] Error handling works properly
+  - [ ] Performance is acceptable
+  - [ ] Complete pipeline is functional
+
+manual_tasks:
+  - title: "Test Complete Prompt Submission Flow"
+    description: |
+      Test the complete flow from frontend prompt to backend response.
+    steps:
+      - Start frontend server (npm run dev)
+      - Start backend server (uvicorn backend.main:app --port 8000)
+      - Open dashboard in browser
+      - Submit a test prompt
+      - Verify response is received
+      - Check that dashboard updates with real data
+    verification:
+      - Prompt submission works without errors
+      - Backend processes the request successfully
+      - Frontend receives and displays the response
+      - Dashboard analytics update with real data
+
+  - title: "Test Real-time Dashboard Updates"
+    description: |
+      Verify that dashboard widgets show real backend data.
+    steps:
+      - Check Today's Queries widget shows actual count
+      - Check Today's Cost widget shows real cost
+      - Check Avg Confidence widget shows real confidence
+      - Check Worker Status widget shows actual status
+      - Submit multiple queries and verify updates
+    verification:
+      - All widgets display real data (not dummy data)
+      - Data updates in real-time after queries
+      - No loading errors or 403 authentication errors
+      - Data format is correct and user-friendly
+
+  - title: "Test Authentication Flow"
+    description: |
+      Verify that authentication works correctly throughout the system.
+    steps:
+      - Check that API key is loaded from environment
+      - Verify authentication headers are sent with requests
+      - Test both dev and production endpoints
+      - Check error handling for invalid authentication
+    verification:
+      - No 403 authentication errors occur
+      - API key is properly included in requests
+      - Both dev and production endpoints work
+      - Error handling works for auth failures
+
+  - title: "Test Error Handling and Edge Cases"
+    description: |
+      Test error handling and edge cases in the complete system.
+    steps:
+      - Test with invalid prompts
+      - Test with network failures
+      - Test with backend server down
+      - Test with malformed responses
+    verification:
+      - Error messages are user-friendly
+      - System gracefully handles failures
+      - No crashes or infinite loading states
+      - Proper fallback behavior
+
+automated_tasks:
+  - title: "Create Integration Test Suite"
+    description: |
+      Create automated tests for the complete frontend-backend integration.
+    files:
+      - "frontend/__tests__/integration.test.ts"
+      - "backend/tests/test_integration.py"
+    changes:
+      - Create frontend integration tests
+      - Create backend integration tests
+      - Add end-to-end test scenarios
+      - Add performance benchmarks
+
+  - title: "Add Performance Monitoring"
+    description: |
+      Add performance monitoring and metrics to the integration.
+    files:
+      - "frontend/lib/monitoring.ts"
+      - "backend/monitoring.py"
+    changes:
+      - Add frontend performance monitoring
+      - Add backend performance metrics
+      - Add real-time performance tracking
+      - Add performance alerts
+
+testing:
+  - title: "Load Testing"
+    description: |
+      Test the system under load to ensure it performs well.
+    steps:
+      - Submit multiple concurrent queries
+      - Monitor response times
+      - Check for memory leaks
+      - Verify system stability
+    verification:
+      - System handles concurrent requests
+      - Response times remain acceptable
+      - No memory leaks or crashes
+      - System remains stable under load
+
+  - title: "User Experience Testing"
+    description: |
+      Test the complete user experience from a user perspective.
+    steps:
+      - Test complete user workflow
+      - Check loading states and transitions
+      - Verify error messages are helpful
+      - Test on different devices/browsers
+    verification:
+      - User workflow is smooth and intuitive
+      - Loading states provide good feedback
+      - Error messages are clear and helpful
+      - Works well on different devices
+
+rollback_plan: |
+  If testing reveals critical issues:
+  1. Revert to previous working state
+  2. Identify and fix specific issues
+  3. Re-test individual components
+  4. Gradually re-integrate fixes
+
+notes: |
+  This ticket focuses on comprehensive testing of the complete
+  frontend-backend integration. The goal is to ensure the entire
+  system works correctly and provides a great user experience.
+
+  Key considerations:
+  - Complete end-to-end functionality
+  - Real-time data updates
+  - Error handling and user feedback
+  - Performance and scalability
+  - User experience and usability

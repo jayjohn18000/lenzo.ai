@@ -209,11 +209,11 @@ class DataAuditor {
     const recommendations: string[] = [];
     
     for (const [location, issue] of this.issues) {
-      if (issue.samples.some(s => s.errors?.some(e => e.includes('undefined')))) {
+      if (issue.samples.some(s => s.errors?.some((e: string) => e.includes('undefined')))) {
         recommendations.push(`Add null/undefined checks in ${location}`);
       }
       
-      if (issue.samples.some(s => s.warnings?.some(w => w.includes('expected to be number')))) {
+      if (issue.samples.some(s => s.warnings?.some((w: string) => w.includes('expected to be number')))) {
         recommendations.push(`Add type conversion or validation for numeric fields in ${location}`);
       }
     }
@@ -357,7 +357,7 @@ export async function fetchWithValidation<T>(
   return apiValidator.validateResponse(response, schema, url);
 }
 
-export function ValidatedComponent<P>(
+export function ValidatedComponent<P extends React.JSX.IntrinsicAttributes>(
   Component: React.ComponentType<P>,
   validate: (props: unknown) => P
 ) {

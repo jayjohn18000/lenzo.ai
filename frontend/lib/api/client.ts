@@ -43,14 +43,21 @@ import { z } from 'zod';
     ): Promise<T> {
       const url = `${this.baseURL}${endpoint}`;
       
+      // Prepare headers with authentication
+      const headers: HeadersInit = {
+        'Content-Type': 'application/json',
+        ...(options.headers as Record<string, string>),
+      };
+      
+      // Add API key authentication for non-dev endpoints
+      if (this.apiKey && !endpoint.startsWith('/dev/')) {
+        (headers as Record<string, string>)['Authorization'] = `Bearer ${this.apiKey}`;
+      }
+      
       try {
         const response = await fetch(url, {
           ...options,
-          headers: {
-          'Content-Type': 'application/json',
-          // No authentication required for dev endpoint
-            ...options.headers,
-          },
+          headers,
         });
   
         const data = await response.json();
@@ -173,8 +180,58 @@ import { z } from 'zod';
      */
     async getUsageStats(days: number = 30): Promise<UsageStats> {
       return this.request(
-        `/dev/usage?days=${days}`,
+        `/api/v1/usage?days=${days}`,
         UsageStatsSchema
+      );
+    }
+    
+    /**
+     * Get today's statistics for dashboard
+     */
+    async getTodayStats(): Promise<any> {
+      return this.request(
+        `/api/v1/usage/today`,
+        z.object({
+          requests: z.number(),
+          cost: z.number(),
+          avg_confidence: z.number(),
+          date: z.string(),
+        })
+      );
+    }
+    
+    /**
+     * Get model performance statistics
+     */
+    async getModelPerformance(): Promise<any> {
+      return this.request(
+        `/api/v1/models/performance`,
+        z.object({
+          top_models: z.array(z.object({
+            name: z.string(),
+            usage_percentage: z.number(),
+            avg_score: z.number(),
+            avg_response_time: z.number(),
+            win_rate: z.number(),
+          })),
+          period_days: z.number(),
+          last_updated: z.string(),
+        })
+      );
+    }
+    
+    /**
+     * Get job statistics (admin endpoint)
+     */
+    async getJobStats(): Promise<any> {
+      return this.request(
+        `/admin/jobs`,
+        z.object({
+          pending_jobs: z.number(),
+          processing_jobs: z.number(),
+          worker_active: z.boolean(),
+          total_processed: z.string(),
+        })
       );
     }
   

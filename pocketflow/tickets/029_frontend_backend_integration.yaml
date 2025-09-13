@@ -1,0 +1,181 @@
+title: "Complete Frontend-Backend Integration with Real Data"
+slug: "frontend-backend-integration"
+priority: "high"
+status: "open"
+assignee: "cursor"
+labels: ["frontend", "backend", "integration", "dashboard", "real-data"]
+
+description: |
+  ## Problem Statement
+  The frontend and backend are now both operational, but the frontend dashboard
+  widgets are still showing dummy data instead of real backend analytics.
+  The backend provides comprehensive analytics endpoints, but the frontend
+  needs to be updated to consume and display this real data.
+
+  ## Current State
+  - ✅ Backend is fully operational with authentication
+  - ✅ Backend provides real analytics endpoints:
+    - `/api/v1/usage/today` - Today's statistics
+    - `/api/v1/usage` - Historical usage data
+    - `/api/v1/models/performance` - Model performance metrics
+    - `/admin/jobs` - Job queue statistics
+  - ✅ Frontend API client has been updated with authentication
+  - ❌ Frontend dashboard widgets still show dummy data
+  - ❌ Frontend doesn't consume real backend analytics
+
+  ## Solution Strategy
+  Update frontend components to:
+  1. Use the updated API client with real endpoints
+  2. Replace dummy data with real backend analytics
+  3. Add proper loading states and error handling
+  4. Implement real-time data updates
+  5. Remove all fallback logic
+
+acceptance_criteria:
+  - [ ] Dashboard shows real usage statistics from backend
+  - [ ] Today's Usage widget displays actual query count
+  - [ ] Average Confidence widget shows real confidence scores
+  - [ ] Cost Optimization widget displays actual cost data
+  - [ ] Top Models widget shows real model rankings
+  - [ ] All widgets update with real backend data
+  - [ ] No more dummy/mock data displayed
+  - [ ] Proper loading states and error handling
+
+manual_tasks:
+  - title: "Verify Backend Analytics Endpoints"
+    description: |
+      Confirm all backend analytics endpoints are working correctly.
+    commands:
+      - "curl -H 'Authorization: Bearer nextagi_test-key-123' http://localhost:8000/api/v1/usage/today"
+      - "curl -H 'Authorization: Bearer nextagi_test-key-123' http://localhost:8000/api/v1/usage?days=7"
+      - "curl -H 'Authorization: Bearer nextagi_test-key-123' http://localhost:8000/api/v1/models/performance"
+      - "curl -H 'Authorization: Bearer nextagi_test-key-123' http://localhost:8000/admin/jobs"
+    verification:
+      - "All endpoints return valid JSON data"
+      - "Authentication headers work correctly"
+      - "Data format matches frontend expectations"
+
+automated_tasks:
+  - title: "Update Dashboard Page to Use Real Data"
+    description: |
+      Update the main dashboard page to fetch and display real backend data.
+    files:
+      - "frontend/app/dashboard/page.tsx"
+    changes:
+      - Replace dummy data with real API calls
+      - Add proper loading states
+      - Implement error handling
+      - Add real-time data updates
+
+  - title: "Update Usage Statistics Widget"
+    description: |
+      Update the usage statistics widget to consume real backend data.
+    files:
+      - "frontend/components/charts/UsageChart.tsx"
+      - "frontend/hooks/use-stats.ts"
+    changes:
+      - Connect to `/api/v1/usage/today` endpoint
+      - Display real query counts and usage data
+      - Add loading and error states
+      - Implement real-time updates
+
+  - title: "Update Confidence Metrics Widget"
+    description: |
+      Update the confidence metrics widget to show real confidence scores.
+    files:
+      - "frontend/components/charts/ConfidenceChart.tsx"
+      - "frontend/hooks/use-analytics.ts"
+    changes:
+      - Connect to backend confidence data
+      - Display real confidence scores
+      - Show confidence trends over time
+      - Add proper error handling
+
+  - title: "Update Cost Optimization Widget"
+    description: |
+      Update the cost optimization widget to show real cost data.
+    files:
+      - "frontend/components/charts/CostChart.tsx"
+      - "frontend/hooks/use-costs.ts"
+    changes:
+      - Connect to backend cost data
+      - Display real cost per query
+      - Show cost optimization opportunities
+      - Add cost trend analysis
+
+  - title: "Update Model Performance Widget"
+    description: |
+      Update the model performance widget to show real model rankings.
+    files:
+      - "frontend/components/charts/ModelChart.tsx"
+      - "frontend/hooks/use-models.ts"
+    changes:
+      - Connect to `/api/v1/models/performance` endpoint
+      - Display real model rankings
+      - Show model performance metrics
+      - Add model selection recommendations
+
+  - title: "Create Real-time Data Hooks"
+    description: |
+      Create React hooks for real-time data fetching from backend.
+    files:
+      - "frontend/hooks/use-stats.ts"
+      - "frontend/hooks/use-analytics.ts"
+      - "frontend/hooks/use-models.ts"
+      - "frontend/hooks/use-costs.ts"
+    changes:
+      - Create custom hooks for data fetching
+      - Add real-time updates with polling
+      - Implement error handling and retry logic
+      - Add loading states and caching
+
+  - title: "Update Query Interface Component"
+    description: |
+      Update the query interface to use real backend responses.
+    files:
+      - "frontend/components/QueryInterface.tsx"
+    changes:
+      - Remove dummy data fallbacks
+      - Use real backend response data
+      - Add proper error handling
+      - Implement real-time status updates
+
+testing:
+  - title: "Test Dashboard Integration"
+    description: |
+      Test that dashboard displays real backend data correctly.
+    steps:
+      - Start frontend and backend servers
+      - Load dashboard page
+      - Verify all widgets show real data
+      - Test real-time updates
+      - Check error handling
+
+  - title: "Test API Client Authentication"
+    description: |
+      Test that API client properly authenticates with backend.
+    steps:
+      - Test authenticated endpoints
+      - Verify API key headers are sent
+      - Test error handling for auth failures
+      - Check response validation
+
+rollback_plan: |
+  If integration causes issues:
+  1. Revert frontend component changes
+  2. Revert API client changes
+  3. Test that dev endpoint still works
+  4. Investigate data integration issues
+
+notes: |
+  This ticket completes the frontend-backend integration by connecting
+  all dashboard widgets to real backend analytics data. The goal is to
+  create a fully functional dashboard that reflects actual system
+  performance.
+
+  Key considerations:
+  - Real-time data updates
+  - Error handling and fallbacks
+  - Performance optimization
+  - Data caching and refresh strategies
+  - User experience during data loading
