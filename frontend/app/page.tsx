@@ -1,7 +1,7 @@
 // frontend/app/page.tsx - ALIGNED WITH BACKEND API
 "use client";
 
-import { safeToFixed, safeCurrency, safePercentage } from '@/lib/safe-formatters';
+import { safeToFixed, safeCurrency, safePercentage, safeTime } from '@/lib/safe-formatters';
 import { useState, useCallback, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
@@ -30,6 +30,8 @@ import {
 // ALIGNED: Import updated types
 import { QueryResponse, ModelMetrics, ModelComparison, QueryRequest, ModelSelectionMode, UsageStats } from "@/types/api";
 import { apiClient } from "@/lib/api";
+import { ErrorBoundary } from "@/components/ErrorBoundary";
+import { HealthStatus } from "@/components/HealthStatus";
 
 export default function NextAGIInterface() {
   const [prompt, setPrompt] = useState("");
@@ -389,7 +391,8 @@ export default function NextAGIInterface() {
   );
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-900 via-blue-900 to-slate-900 text-white">
+    <ErrorBoundary>
+      <div className="min-h-screen bg-gradient-to-br from-slate-900 via-blue-900 to-slate-900 text-white">
       {/* Premium Header */}
       <div className="bg-black/20 backdrop-blur-xl border-b border-white/10 p-4">
         <div className="flex justify-between items-center max-w-7xl mx-auto">
@@ -435,6 +438,7 @@ export default function NextAGIInterface() {
                         className="w-full p-2 bg-white/10 border border-white/20 rounded text-white"
                         value={mode}
                         onChange={(e) => setMode(e.target.value as ModelSelectionMode)}
+                        title="Select priority mode for AI model selection"
                       >
                         <option value="balanced">Balanced (Quality + Speed)</option>
                         <option value="quality">Maximum Quality</option>
@@ -668,7 +672,7 @@ export default function NextAGIInterface() {
             
             <MetricCard
               title="Response Time"
-              value={statsLoading ? "—" : usageStats ? safeTime(usageStats.avg_response_time * 1000) : "ERROR"}
+              value={statsLoading ? "—" : usageStats && usageStats.avg_response_time != null ? safeTime(usageStats.avg_response_time * 1000) : "—"}
               trend={statsLoading ? "" : usageStats ? "-0.3s improvement" : ""}
               icon={Clock}
               color="text-blue-400"
@@ -735,6 +739,10 @@ export default function NextAGIInterface() {
           </div>
         </div>
       </div>
+      
+      {/* Health Status Monitor */}
+      <HealthStatus />
     </div>
+    </ErrorBoundary>
   );
 }

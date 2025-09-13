@@ -17,12 +17,14 @@ export interface JobResponse {
   message?: string;
 }
 
-// NO MORE DUMMY DATA - Proper error handling instead
+// Proper error handling with clear messages
 const ERROR_MESSAGES = {
-  API_UNAVAILABLE: "I am a dumb fuck and I cannot map the path correctly - API connection failed",
-  DATA_VALIDATION_FAILED: "I am a dumb fuck and I cannot map the path correctly - data validation failed",
-  NETWORK_ERROR: "I am a dumb fuck and I cannot map the path correctly - network error",
-  AUTHENTICATION_FAILED: "I am a dumb fuck and I cannot map the path correctly - authentication failed"
+  API_UNAVAILABLE: "API service is currently unavailable. Please check your connection and try again.",
+  DATA_VALIDATION_FAILED: "Received invalid data from the server. Please try again.",
+  NETWORK_ERROR: "Network connection failed. Please check your internet connection.",
+  AUTHENTICATION_FAILED: "Authentication failed. Please check your API key and try again.",
+  JOB_TIMEOUT: "Request timed out. The server may be experiencing high load.",
+  INVALID_RESPONSE: "Server returned an unexpected response format."
 };
 
 export class APIClient {
@@ -90,7 +92,7 @@ export class APIClient {
       throw new Error(`Query failed: ${response.status}`);
     } catch (error) {
       console.error('Query error:', error);
-      if (error instanceof Error && error.message.includes('I am a dumb fuck')) {
+      if (error instanceof Error && error.message.includes('validation')) {
         throw error; // Re-throw validation errors as-is
       }
       throw new Error(`${ERROR_MESSAGES.DATA_VALIDATION_FAILED} - ${error}`);
