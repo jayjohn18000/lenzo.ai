@@ -1,0 +1,19 @@
+title: "Verify Environment Variables Configuration"
+description: |
+  Ensure all required environment variables are properly set for frontend-backend communication.
+  The frontend should have consistent API endpoint configuration.
+
+acceptance_criteria:
+  - NEXT_PUBLIC_API_KEY is set to 'nextagi_test-key-123'
+  - NEXT_PUBLIC_BACKEND_URL is set to 'http://localhost:8000' (optional)
+  - Frontend can connect to backend without hardcoded URLs
+  - Environment variables are documented
+
+technical_details:
+  - Current: API_BASE_URL defaults to 'http://localhost:8000' ✅
+  - Current: API_KEY defaults to 'nextagi_test-key-123' ✅
+  - Need to verify .env.local file has correct values
+  - Should add NEXT_PUBLIC_BACKEND_URL for consistency
+
+priority: medium
+labels: ["configuration", "environment"]

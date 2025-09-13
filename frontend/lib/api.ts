@@ -1,7 +1,7 @@
 // lib/api.ts - FIXED API CLIENT
 import { QueryRequest, QueryResponse, UsageStats, ModelInfo, validateQueryResponse, validateUsageStats } from '@/types/api';
 
-const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || process.env.NEXT_PUBLIC_BACKEND_URL || '';
+const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || process.env.NEXT_PUBLIC_BACKEND_URL || 'http://localhost:8000';
 const API_KEY = process.env.NEXT_PUBLIC_API_KEY || 'nextagi_test-key-123';
 
 // Job response interface
@@ -63,9 +63,16 @@ export class APIClient {
   // Main query method with async job support
   async query(request: QueryRequest, options?: { fast?: boolean }): Promise<QueryResponse> {
     const fast = options?.fast ?? (request.mode === 'speed');
+    const url = `${API_BASE_URL}/api/v1/query?fast=${fast}`;
+    
+    console.log('🚀 API Client Query:', {
+      url,
+      apiKey: API_KEY ? `${API_KEY.substring(0, 12)}...` : 'none',
+      request: request
+    });
     
     try {
-      const response = await fetch(`${API_BASE_URL}/api/v1/query?fast=${fast}`, {
+      const response = await fetch(url, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -89,7 +96,25 @@ export class APIClient {
         return validateQueryResponse(data);
       }
 
-      throw new Error(`Query failed: ${response.status}`);
+      // Handle authentication errors specifically
+      if (response.status === 401 || response.status === 403) {
+        const errorText = await response.text();
+        console.error('🔐 Authentication failed:', {
+          status: response.status,
+          url,
+          apiKey: API_KEY ? `${API_KEY.substring(0, 12)}...` : 'none',
+          error: errorText
+        });
+        throw new Error(`Authentication failed (${response.status}): ${errorText}`);
+      }
+
+      const errorText = await response.text();
+      console.error('❌ Query failed:', {
+        status: response.status,
+        url,
+        error: errorText
+      });
+      throw new Error(`Query failed: ${response.status} - ${errorText}`);
     } catch (error) {
       console.error('Query error:', error);
       if (error instanceof Error && error.message.includes('validation')) {

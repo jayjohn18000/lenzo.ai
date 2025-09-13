@@ -1,0 +1,22 @@
+title: "Eliminate Fallback Data - Ensure Real Backend Data Only"
+description: |
+  Remove all fallback/dummy data from the frontend. All widgets should only show
+  real data from the backend API. If backend is unavailable, show loading states
+  or clear error messages instead of fake data.
+
+acceptance_criteria:
+  - No hardcoded fallback values in metric cards
+  - Loading states show "—" or spinners
+  - Error states show clear error messages
+  - All data comes from backend API calls
+  - No dummy data in any component
+
+technical_details:
+  - Current: Usage stats show real data ✅
+  - Current: Query results show real data ✅
+  - Need to audit all components for fallback data
+  - Should implement proper loading/error states
+  - Remove any hardcoded values like "2,847" in header
+
+priority: high
+labels: ["data-integrity", "frontend", "backend"]

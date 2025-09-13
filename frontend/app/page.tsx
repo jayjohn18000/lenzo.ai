@@ -32,6 +32,7 @@ import { QueryResponse, ModelMetrics, ModelComparison, QueryRequest, ModelSelect
 import { apiClient } from "@/lib/api";
 import { ErrorBoundary } from "@/components/ErrorBoundary";
 import { HealthStatus } from "@/components/HealthStatus";
+import { QueryErrorDisplay } from "@/components/ErrorDisplay";
 
 export default function NextAGIInterface() {
   const [prompt, setPrompt] = useState("");
@@ -85,10 +86,12 @@ export default function NextAGIInterface() {
       maximumFractionDigits: 4,
     }).format(amount);
 
-  // Fetch usage statistics
-  const fetchUsageStats = useCallback(async () => {
+  // Fetch usage statistics with retry capability
+  const fetchUsageStats = useCallback(async (retryCount = 0) => {
     try {
       setStatsError(null);
+      setStatsLoading(true);
+      
       const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL || process.env.NEXT_PUBLIC_BACKEND_URL || 'http://localhost:8000'}/api/v1/usage?days=7`, {
         headers: {
           'Authorization': `Bearer ${process.env.NEXT_PUBLIC_API_KEY || 'nextagi_test-key-123'}`
@@ -96,6 +99,9 @@ export default function NextAGIInterface() {
       });
       
       if (!response.ok) {
+        if (response.status === 401 || response.status === 403) {
+          throw new Error(`Authentication failed (${response.status}): Please check your API key configuration`);
+        }
         throw new Error(`Failed to fetch usage statistics: ${response.status}`);
       }
       
@@ -103,6 +109,14 @@ export default function NextAGIInterface() {
       setUsageStats(data);
     } catch (err: any) {
       console.error("Error fetching usage stats:", err);
+      
+      // Auto-retry once for network errors
+      if (retryCount === 0 && (err.message.includes('fetch') || err.message.includes('network'))) {
+        console.log("Retrying usage stats fetch...");
+        setTimeout(() => fetchUsageStats(1), 2000);
+        return;
+      }
+      
       setStatsError(err.message || "Unable to load statistics");
       setUsageStats(null);
     } finally {
@@ -406,7 +420,7 @@ export default function NextAGIInterface() {
             <Badge className="bg-yellow-500 text-black font-medium">Enterprise</Badge>
             <span>Legal Corp Solutions</span>
             <span>•</span>
-            <span>API Requests: 2,847 / 10,000</span>
+            <span>API Requests: {usageStats ? `${formatNumber(usageStats.total_requests)} / 10,000` : "Loading..."}</span>
           </div>
         </div>
       </div>
@@ -520,15 +534,11 @@ export default function NextAGIInterface() {
                     </div>
                   )}
 
-                  {error && (
-                    <div className="p-4 bg-red-500/20 border border-red-500/30 rounded-lg text-red-200">
-                      <div className="flex items-center gap-2">
-                        <AlertTriangle className="h-5 w-5" />
-                        <span className="font-medium">Error:</span>
-                        <span>{error}</span>
-                      </div>
-                    </div>
-                  )}
+                  <QueryErrorDisplay 
+                    error={error} 
+                    onRetry={handleSubmit}
+                    isRetrying={loading}
+                  />
                 </div>
               </CardContent>
             </Card>
@@ -654,18 +664,36 @@ export default function NextAGIInterface() {
 
           {/* Right Panel - Premium Metrics */}
           <div className="space-y-6">
+            {/* Stats Error Display */}
+            {statsError && (
+              <div className="p-3 bg-red-500/20 border border-red-500/30 rounded-lg text-red-200">
+                <div className="flex items-center gap-2 mb-2">
+                  <AlertTriangle className="h-4 w-4" />
+                  <span className="text-sm font-medium">Statistics Error</span>
+                </div>
+                <p className="text-xs text-red-300 mb-2">{statsError}</p>
+                <Button 
+                  variant="outline" 
+                  size="sm" 
+                  onClick={() => fetchUsageStats()}
+                  className="text-xs bg-red-500/10 border-red-500/30 text-red-200 hover:bg-red-500/20"
+                >
+                  Retry
+                </Button>
+              </div>
+            )}
             <MetricCard
               title="Today's Usage"
-              value={statsLoading ? "—" : usageStats ? formatNumber(usageStats.total_requests) : "ERROR"}
-              trend={statsLoading ? "" : usageStats ? "+12% from yesterday" : ""}
+              value={statsLoading ? "—" : usageStats ? formatNumber(usageStats.total_requests) : "—"}
+              trend={statsLoading ? "" : ""}
               icon={Activity}
               color="text-blue-400"
             />
             
             <MetricCard
               title="Average Confidence"
-              value={statsLoading ? "—" : usageStats ? formatPercentage01(usageStats.avg_confidence) : "ERROR"}
-              trend={statsLoading ? "" : usageStats ? "+2.1% this week" : ""}
+              value={statsLoading ? "—" : usageStats ? formatPercentage01(usageStats.avg_confidence) : "—"}
+              trend={statsLoading ? "" : ""}
               icon={Shield}
               color="text-green-400"
             />
@@ -673,15 +701,15 @@ export default function NextAGIInterface() {
             <MetricCard
               title="Response Time"
               value={statsLoading ? "—" : usageStats && usageStats.avg_response_time != null ? safeTime(usageStats.avg_response_time * 1000) : "—"}
-              trend={statsLoading ? "" : usageStats ? "-0.3s improvement" : ""}
+              trend={statsLoading ? "" : ""}
               icon={Clock}
               color="text-blue-400"
             />
             
             <MetricCard
               title="Cost Optimization"
-              value={statsLoading ? "—" : usageStats ? formatCurrency(usageStats.total_cost) : "ERROR"}
-              trend={statsLoading ? "" : usageStats ? "-18% vs baseline" : ""}
+              value={statsLoading ? "—" : usageStats ? formatCurrency(usageStats.total_cost) : "—"}
+              trend={statsLoading ? "" : ""}
               icon={DollarSign}
               color="text-yellow-400"
             />

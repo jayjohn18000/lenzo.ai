@@ -1,0 +1,31 @@
+title: "Fix API Authentication Flow - 403 Error Resolution"
+description: |
+  The frontend is getting 403 authentication errors when submitting queries because:
+  1. API_BASE_URL is empty, causing requests to go to relative paths instead of backend
+  2. Usage stats work (direct fetch to localhost:8000) but queries fail (empty base URL)
+  3. Need to ensure consistent API endpoint configuration
+
+acceptance_criteria:
+  - Frontend query submissions work without 403 errors
+  - API key authentication is properly passed to backend
+  - Both usage stats and query endpoints use consistent base URL
+  - All widgets display real backend data instead of fallback data
+  - Error handling shows clear messages instead of generic failures
+
+failure_summary: |
+  Current state:
+  - Backend is running and healthy (confirmed via logs)
+  - Usage stats API works (returns real data)
+  - Query API returns 403 Not Authenticated
+  - Frontend shows fallback data instead of real data
+  - API_BASE_URL is empty string, causing relative path requests
+
+technical_details:
+  - Backend expects: Authorization: Bearer nextagi_test-key-123
+  - Backend has development bypass for test key
+  - Frontend usage stats: Direct fetch to http://localhost:8000 ✅
+  - Frontend queries: fetch('') + '/api/v1/query' ❌
+  - Environment variables not set: NEXT_PUBLIC_API_URL, NEXT_PUBLIC_BACKEND_URL
+
+priority: high
+labels: ["bug", "authentication", "api", "frontend"]

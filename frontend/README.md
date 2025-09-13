@@ -1,8 +1,30 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# NextAGI Frontend
+
+This is the Next.js frontend for NextAGI - an advanced AI reliability platform that detects and prevents hallucinations in LLM outputs.
+
+## Environment Configuration
+
+Before running the frontend, create a `.env.local` file in the frontend directory with the following variables:
+
+```bash
+# API Configuration
+NEXT_PUBLIC_API_URL=http://localhost:8000
+NEXT_PUBLIC_BACKEND_URL=http://localhost:8000
+NEXT_PUBLIC_API_KEY=nextagi_test-key-123
+
+# Development Settings
+NODE_ENV=development
+```
+
+### Required Environment Variables
+
+- `NEXT_PUBLIC_API_URL`: The backend API URL (defaults to http://localhost:8000)
+- `NEXT_PUBLIC_BACKEND_URL`: Alternative backend URL (optional, falls back to NEXT_PUBLIC_API_URL)
+- `NEXT_PUBLIC_API_KEY`: API key for authentication (defaults to nextagi_test-key-123 for development)
 
 ## Getting Started
 
-First, run the development server:
+First, ensure the backend is running on port 8000, then run the development server:
 
 ```bash
 npm run dev
