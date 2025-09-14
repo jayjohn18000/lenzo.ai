@@ -4,25 +4,50 @@
 
 /* Custom CSS Variables for NextAGI Theme */
 :root {
-  --background: 222.2 84% 4.9%;
-  --foreground: 210 40% 98%;
-  --card: 222.2 84% 4.9%;
-  --card-foreground: 210 40% 98%;
-  --popover: 222.2 84% 4.9%;
-  --popover-foreground: 210 40% 98%;
-  --primary: 217.2 91.2% 59.8%;
-  --primary-foreground: 222.2 84% 4.9%;
-  --secondary: 217.2 32.6% 17.5%;
-  --secondary-foreground: 210 40% 98%;
-  --muted: 217.2 32.6% 17.5%;
-  --muted-foreground: 215 20.2% 65.1%;
-  --accent: 217.2 32.6% 17.5%;
-  --accent-foreground: 210 40% 98%;
-  --destructive: 0 84.2% 60.2%;
-  --destructive-foreground: 210 40% 98%;
-  --border: 217.2 32.6% 17.5%;
-  --input: 217.2 32.6% 17.5%;
-  --ring: 224.3 76.3% 94.0%;
+  /* Light theme colors */
+  --background: 255 255 255;   /* white */
+  --foreground: 15 23 42;      /* slate-900 */
+  --card: 248 250 252;         /* slate-50 */
+  --card-foreground: 15 23 42; /* slate-900 */
+  --popover: 255 255 255;      /* white */
+  --popover-foreground: 15 23 42; /* slate-900 */
+  --primary: 59 130 246;       /* blue-500 */
+  --primary-foreground: 255 255 255; /* white */
+  --secondary: 241 245 249;    /* slate-100 */
+  --secondary-foreground: 15 23 42; /* slate-900 */
+  --muted: 241 245 249;        /* slate-100 */
+  --muted-foreground: 100 116 139; /* slate-500 */
+  --accent: 241 245 249;       /* slate-100 */
+  --accent-foreground: 15 23 42; /* slate-900 */
+  --destructive: 239 68 68;     /* red-500 */
+  --destructive-foreground: 255 255 255; /* white */
+  --border: 226 232 240;       /* slate-200 */
+  --input: 241 245 249;        /* slate-100 */
+  --ring: 59 130 246;          /* blue-500 */
+  --radius: 0.5rem;
+}
+
+.dark {
+  /* Dark theme colors */
+  --background: 15 23 42;      /* slate-900 */
+  --foreground: 241 245 249;   /* slate-100 */
+  --card: 17 24 39;            /* slate-800 */
+  --card-foreground: 241 245 249; /* slate-100 */
+  --popover: 17 24 39;         /* slate-800 */
+  --popover-foreground: 241 245 249; /* slate-100 */
+  --primary: 96 165 250;       /* blue-400 */
+  --primary-foreground: 15 23 42; /* slate-900 */
+  --secondary: 30 41 59;       /* slate-700 */
+  --secondary-foreground: 241 245 249; /* slate-100 */
+  --muted: 30 41 59;           /* slate-700 */
+  --muted-foreground: 148 163 184; /* slate-400 */
+  --accent: 30 41 59;          /* slate-700 */
+  --accent-foreground: 241 245 249; /* slate-100 */
+  --destructive: 248 113 113;  /* red-400 */
+  --destructive-foreground: 15 23 42; /* slate-900 */
+  --border: 51 65 85;          /* slate-600 */
+  --input: 30 41 59;           /* slate-700 */
+  --ring: 96 165 250;          /* blue-400 */
   --radius: 0.5rem;
 }
 
@@ -32,10 +57,15 @@
 }
 
 body {
-  background: linear-gradient(135deg, #0f1419 0%, #1a2332 100%);
+  background-color: hsl(var(--background));
   color: hsl(var(--foreground));
   font-feature-settings: "rlig" 1, "calt" 1;
   min-height: 100vh;
+}
+
+/* Dark theme gradient background */
+.dark body {
+  background: linear-gradient(135deg, #0f1419 0%, #1a2332 100%);
 }
 
 /* Custom Glassmorphism Effects */

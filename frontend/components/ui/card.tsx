@@ -13,9 +13,9 @@ export function Card({ children, className, interactive = false, glowing = false
   return (
     <div
       className={cn(
-        "bg-white/5 backdrop-blur-xl border border-white/10 rounded-xl shadow-lg",
-        interactive && "transition-all duration-300 hover:bg-white/8 hover:scale-[1.02] hover:shadow-2xl cursor-pointer",
-        glowing && "ring-1 ring-blue-400/20 shadow-lg shadow-blue-500/10",
+        "bg-card border border-border rounded-xl shadow-lg",
+        interactive && "transition-all duration-300 hover:bg-accent hover:scale-[1.02] hover:shadow-2xl cursor-pointer",
+        glowing && "ring-1 ring-primary/20 shadow-lg shadow-primary/10",
         className
       )}
       {...props}

@@ -20,6 +20,7 @@ import { QueryRequest, ModelSelectionMode } from "@/types/api";
 import { apiClient } from "@/lib/api/unified-client";
 import ComprehensiveErrorBoundary from "@/components/ComprehensiveErrorBoundary";
 import { isDevelopment } from "@/lib/env-config";
+import { ThemeToggle } from "@/components/ui/theme-toggle";
 
 export default function NextAGILanding() {
   const [prompt, setPrompt] = useState("");
@@ -55,20 +56,21 @@ export default function NextAGILanding() {
 
   return (
     <ComprehensiveErrorBoundary showDetails={isDevelopment}>
-      <div className="min-h-screen bg-gradient-to-br from-blue-50 via-white to-purple-50">
+      <div className="min-h-screen bg-background">
         {/* Header */}
-        <header className="bg-white/80 backdrop-blur-sm border-b border-gray-200">
+        <header className="bg-card/80 backdrop-blur-sm border-b border-border">
           <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
             <div className="flex items-center justify-between py-6">
               <div className="flex items-center space-x-3">
-                <Brain className="h-10 w-10 text-blue-600" />
+                <Brain className="h-10 w-10 text-primary" />
                 <div>
-                  <h1 className="text-3xl font-bold text-gray-900">NextAGI</h1>
-                  <p className="text-sm text-gray-600">Multi-Model AI Platform</p>
+                  <h1 className="text-3xl font-bold text-foreground">NextAGI</h1>
+                  <p className="text-sm text-muted-foreground">Multi-Model AI Platform</p>
                 </div>
               </div>
               <div className="flex items-center space-x-4">
-                <Badge variant="outline" className="text-sm bg-green-50 text-green-700 border-green-200">
+                <ThemeToggle />
+                <Badge variant="outline" className="text-sm">
                   Enterprise Ready
                 </Badge>
                 <Button 
@@ -87,10 +89,10 @@ export default function NextAGILanding() {
         {/* Hero Section */}
         <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
           <div className="text-center mb-12">
-            <h2 className="text-4xl font-bold text-gray-900 mb-4">
+            <h2 className="text-4xl font-bold text-foreground mb-4">
               Get the Best Answer from Multiple AI Models
             </h2>
-            <p className="text-xl text-gray-600 max-w-3xl mx-auto">
+            <p className="text-xl text-muted-foreground max-w-3xl mx-auto">
               NextAGI routes your query to the optimal AI models, compares responses, 
               and delivers the most accurate answer with confidence scoring.
             </p>
@@ -98,13 +100,13 @@ export default function NextAGILanding() {
 
           {/* Quick Chat Interface */}
           <div className="max-w-4xl mx-auto mb-12">
-            <Card className="shadow-lg border-0 bg-white/80 backdrop-blur-sm">
+            <Card className="shadow-lg border border-border bg-card/80 backdrop-blur-sm">
               <CardHeader className="text-center pb-4">
                 <CardTitle className="flex items-center justify-center gap-2 text-2xl">
-                  <Sparkles className="h-6 w-6 text-blue-600" />
+                  <Sparkles className="h-6 w-6 text-primary" />
                   Quick AI Query
                 </CardTitle>
-                <p className="text-gray-600">
+                <p className="text-muted-foreground">
                   Ask anything and get the best answer from multiple AI models
                 </p>
               </CardHeader>
@@ -123,11 +125,11 @@ export default function NextAGILanding() {
                     onClick={handleQuickQuery} 
                     disabled={loading || !prompt.trim()}
                     size="lg"
-                    className="bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 text-white px-8 py-3 text-lg"
+                    className="px-8 py-3 text-lg"
                   >
                     {loading ? (
                       <div className="flex items-center gap-2">
-                        <div className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+                        <div className="w-5 h-5 border-2 border-current/30 border-t-current rounded-full animate-spin" />
                         Analyzing with AI Models...
                       </div>
                     ) : (
@@ -142,15 +144,15 @@ export default function NextAGILanding() {
 
                 {/* Result */}
                 {result && (
-                  <Card className="bg-gradient-to-r from-green-50 to-blue-50 border-green-200">
+                  <Card className="bg-accent border-border">
                     <CardContent className="p-6">
                       <div className="flex items-start gap-3">
-                        <div className="p-2 bg-green-100 rounded-full">
-                          <Target className="h-5 w-5 text-green-600" />
+                        <div className="p-2 bg-primary/10 rounded-full">
+                          <Target className="h-5 w-5 text-primary" />
                         </div>
                         <div className="flex-1">
-                          <h4 className="font-semibold text-green-800 mb-2">Best Answer</h4>
-                          <p className="text-gray-700 leading-relaxed">{result}</p>
+                          <h4 className="font-semibold text-foreground mb-2">Best Answer</h4>
+                          <p className="text-muted-foreground leading-relaxed">{result}</p>
                         </div>
                       </div>
                     </CardContent>
@@ -162,32 +164,32 @@ export default function NextAGILanding() {
 
           {/* Features Grid */}
           <div className="grid grid-cols-1 md:grid-cols-3 gap-8 mb-12">
-            <Card className="text-center p-6 bg-white/60 backdrop-blur-sm border-0">
-              <div className="p-3 bg-blue-100 rounded-full w-fit mx-auto mb-4">
-                <Shield className="h-8 w-8 text-blue-600" />
+            <Card className="text-center p-6 bg-card/60 backdrop-blur-sm">
+              <div className="p-3 bg-primary/10 rounded-full w-fit mx-auto mb-4">
+                <Shield className="h-8 w-8 text-primary" />
               </div>
-              <h3 className="text-xl font-semibold mb-2">Reliability</h3>
-              <p className="text-gray-600">
+              <h3 className="text-xl font-semibold mb-2 text-foreground">Reliability</h3>
+              <p className="text-muted-foreground">
                 Multiple AI models ensure accuracy with confidence scoring and hallucination detection.
               </p>
             </Card>
 
-            <Card className="text-center p-6 bg-white/60 backdrop-blur-sm border-0">
-              <div className="p-3 bg-purple-100 rounded-full w-fit mx-auto mb-4">
-                <Zap className="h-8 w-8 text-purple-600" />
+            <Card className="text-center p-6 bg-card/60 backdrop-blur-sm">
+              <div className="p-3 bg-primary/10 rounded-full w-fit mx-auto mb-4">
+                <Zap className="h-8 w-8 text-primary" />
               </div>
-              <h3 className="text-xl font-semibold mb-2">Speed</h3>
-              <p className="text-gray-600">
+              <h3 className="text-xl font-semibold mb-2 text-foreground">Speed</h3>
+              <p className="text-muted-foreground">
                 Optimized routing and parallel processing deliver fast responses without compromising quality.
               </p>
             </Card>
 
-            <Card className="text-center p-6 bg-white/60 backdrop-blur-sm border-0">
-              <div className="p-3 bg-green-100 rounded-full w-fit mx-auto mb-4">
-                <BarChart3 className="h-8 w-8 text-green-600" />
+            <Card className="text-center p-6 bg-card/60 backdrop-blur-sm">
+              <div className="p-3 bg-primary/10 rounded-full w-fit mx-auto mb-4">
+                <BarChart3 className="h-8 w-8 text-primary" />
               </div>
-              <h3 className="text-xl font-semibold mb-2">Analytics</h3>
-              <p className="text-gray-600">
+              <h3 className="text-xl font-semibold mb-2 text-foreground">Analytics</h3>
+              <p className="text-muted-foreground">
                 Comprehensive dashboard with usage metrics, model performance, and cost optimization.
               </p>
             </Card>
@@ -195,10 +197,10 @@ export default function NextAGILanding() {
 
           {/* CTA Section */}
           <div className="text-center">
-            <Card className="bg-gradient-to-r from-blue-600 to-purple-600 text-white border-0">
+            <Card className="bg-primary text-primary-foreground">
               <CardContent className="p-8">
                 <h3 className="text-2xl font-bold mb-4">Ready for Enterprise?</h3>
-                <p className="text-blue-100 mb-6 max-w-2xl mx-auto">
+                <p className="text-primary-foreground/80 mb-6 max-w-2xl mx-auto">
                   Access advanced analytics, custom model configurations, and enterprise-grade reliability 
                   with our comprehensive dashboard.
                 </p>
@@ -206,7 +208,7 @@ export default function NextAGILanding() {
                   variant="secondary" 
                   size="lg"
                   onClick={() => window.location.href = '/dashboard'}
-                  className="bg-white text-blue-600 hover:bg-gray-100 px-8 py-3"
+                  className="px-8 py-3"
                 >
                   <BarChart3 className="h-5 w-5 mr-2" />
                   Open Dashboard
@@ -217,9 +219,9 @@ export default function NextAGILanding() {
         </main>
 
         {/* Footer */}
-        <footer className="bg-gray-50 border-t border-gray-200 mt-16">
+        <footer className="bg-muted border-t border-border mt-16">
           <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-            <div className="text-center text-gray-600">
+            <div className="text-center text-muted-foreground">
               <p>&copy; 2025 NextAGI. Enterprise-grade multi-model AI platform.</p>
             </div>
           </div>

@@ -3,7 +3,7 @@
 
 import { safeToFixed, safeCurrency, safeTime } from '@/lib/safe-formatters';
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Progress } from "@/components/ui/progress";
 import {
@@ -25,6 +25,7 @@ import { useTodayStats, useUsageStats } from "@/hooks/use-stats";
 import { useModelPerformance } from "@/hooks/use-models";
 import { useJobStats } from "@/hooks/use-jobs";
 import { isDevelopment } from "@/lib/env-config";
+import { ThemeToggle } from "@/components/ui/theme-toggle";
 
 export default function Dashboard() {
 
@@ -90,17 +91,18 @@ export default function Dashboard() {
 
   return (
     <ComprehensiveErrorBoundary showDetails={isDevelopment}>
-      <div className="min-h-screen bg-gradient-to-br from-gray-50 to-gray-100">
+      <div className="min-h-screen bg-background">
       {/* Header */}
-      <header className="bg-white shadow-sm border-b">
+      <header className="bg-card shadow-sm border-b border-border">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex items-center justify-between py-4">
             <div className="flex items-center space-x-3">
-              <Brain className="h-8 w-8 text-blue-600" />
-              <h1 className="text-2xl font-bold text-gray-900">NextAGI Dashboard</h1>
+              <Brain className="h-8 w-8 text-primary" />
+              <h1 className="text-2xl font-bold text-foreground">NextAGI Dashboard</h1>
             </div>
             <div className="flex items-center space-x-4">
-              <Badge variant="outline" className="text-sm bg-green-50 text-green-700 border-green-200">
+              <ThemeToggle />
+              <Badge variant="outline" className="text-sm">
                 API v2.0 Aligned
               </Badge>
               <Button variant="outline" size="sm">
@@ -120,12 +122,12 @@ export default function Dashboard() {
             <CardContent className="p-6">
               <div className="flex items-center justify-between">
                 <div>
-                  <p className="text-sm text-gray-600">Today's Queries</p>
-                  <p className="text-2xl font-bold">
+                  <p className="text-sm text-muted-foreground">Today's Queries</p>
+                  <p className="text-2xl font-bold text-foreground">
                     {todayLoading ? "—" : todayStats ? formatNumber(todayStats.requests) : "0"}
                   </p>
                 </div>
-                <BarChart3 className="h-8 w-8 text-blue-500" />
+                <BarChart3 className="h-8 w-8 text-primary" />
               </div>
               {todayError && <p className="mt-2 text-xs text-red-500">{todayError}</p>}
             </CardContent>
@@ -135,12 +137,12 @@ export default function Dashboard() {
             <CardContent className="p-6">
               <div className="flex items-center justify-between">
                 <div>
-                  <p className="text-sm text-gray-600">Today's Cost</p>
-                  <p className="text-2xl font-bold">
+                  <p className="text-sm text-muted-foreground">Today's Cost</p>
+                  <p className="text-2xl font-bold text-foreground">
                     {todayLoading ? "—" : todayStats ? formatCurrency(todayStats.cost) : "$0.00"}
                   </p>
                 </div>
-                <DollarSign className="h-8 w-8 text-green-500" />
+                <DollarSign className="h-8 w-8 text-primary" />
               </div>
             </CardContent>
           </Card>
@@ -149,12 +151,12 @@ export default function Dashboard() {
             <CardContent className="p-6">
               <div className="flex items-center justify-between">
                 <div>
-                  <p className="text-sm text-gray-600">Avg Confidence</p>
-                  <p className="text-2xl font-bold">
+                  <p className="text-sm text-muted-foreground">Avg Confidence</p>
+                  <p className="text-2xl font-bold text-foreground">
                     {todayLoading ? "—" : todayStats ? formatPercentage01(todayStats.avg_confidence) : "0%"}
                   </p>
                 </div>
-                <Target className="h-8 w-8 text-purple-500" />
+                <Target className="h-8 w-8 text-primary" />
               </div>
             </CardContent>
           </Card>
@@ -163,12 +165,12 @@ export default function Dashboard() {
             <CardContent className="p-6">
               <div className="flex items-center justify-between">
                 <div>
-                  <p className="text-sm text-gray-600">Worker Status</p>
-                  <p className="text-2xl font-bold">
+                  <p className="text-sm text-muted-foreground">Worker Status</p>
+                  <p className="text-2xl font-bold text-foreground">
                     {jobLoading ? "—" : jobStats ? (jobStats.worker_active ? "Active" : "Inactive") : "Unknown"}
                   </p>
                 </div>
-                <Activity className="h-8 w-8 text-orange-500" />
+                <Activity className="h-8 w-8 text-primary" />
               </div>
               {jobError && <p className="mt-2 text-xs text-red-500">{jobError}</p>}
             </CardContent>
@@ -176,18 +178,17 @@ export default function Dashboard() {
         </div>
 
         {/* Quick Access to Chat */}
-        <Card className="mb-8 bg-gradient-to-r from-blue-50 to-purple-50 border-blue-200">
+        <Card className="mb-8 bg-accent border-border">
           <CardContent className="p-6">
             <div className="flex items-center justify-between">
               <div>
-                <h3 className="text-lg font-semibold text-gray-900 mb-2">Need to Ask AI Models?</h3>
-                <p className="text-gray-600">
+                <h3 className="text-lg font-semibold text-foreground mb-2">Need to Ask AI Models?</h3>
+                <p className="text-muted-foreground">
                   Use our quick chat interface for immediate AI responses with multi-model analysis.
                 </p>
               </div>
               <Button 
                 onClick={() => window.location.href = '/'}
-                className="bg-blue-600 hover:bg-blue-700 text-white"
               >
                 <Brain className="h-4 w-4 mr-2" />
                 Open Chat
@@ -210,12 +211,12 @@ export default function Dashboard() {
                   <div key={i} className="flex items-center justify-between">
                     <div className="flex items-center gap-3">
                       <span className="font-medium">{model.name}</span>
-                      <span className="text-sm text-gray-500">{model.usage_percentage}% usage</span>
+                      <span className="text-sm text-muted-foreground">{model.usage_percentage}% usage</span>
                     </div>
                     <div className="flex items-center gap-2">
-                      <div className="w-20 h-2 bg-gray-200 rounded-full overflow-hidden">
+                      <div className="w-20 h-2 bg-muted rounded-full overflow-hidden">
                         <div
-                          className="h-full bg-blue-500 transition-all duration-300"
+                          className="h-full bg-primary transition-all duration-300"
                           style={{ width: `${model.usage_percentage}%` }}
                         />
                       </div>
